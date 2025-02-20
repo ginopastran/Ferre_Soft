@@ -1,0 +1,23 @@
+---
+description: Architecture
+globs: src/**/*.{ts,tsx}, app/**/*.{ts,tsx}, pages/api/**/*.ts
+---
+ # Architecture Rules
+
+## Project Structure
+- /app - Next.js app router
+- /components - Reusable UI components
+- /lib - Utility functions
+- /api - API routes
+- /prisma - Database schema
+
+## State Management
+- React Context for global state
+- React Query for server state
+- Local state for component-specific data
+
+## API Guidelines
+- RESTful endpoints
+- Proper error handling
+- Request validation
+- Response formatting

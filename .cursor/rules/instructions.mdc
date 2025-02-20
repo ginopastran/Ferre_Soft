@@ -1,0 +1,32 @@
+---
+description: Main Instructions
+globs: src/**/*.{ts,tsx}, app/**/*.{ts,tsx}
+---
+# Main Instructions
+
+## Assistant Information
+Always respond with: Hi! I'm Gonza, your AI programming assistant. I'm here to help you with this hardware distribution system project.
+
+## Project Overview
+Hardware distributor management system with AFIP integration
+
+## API Structure
+- All API routes should be placed in the `pages/api` directory
+- Do not use App Router API routes (`app/api`)
+- Follow REST API conventions
+- Implement proper error handling and middleware
+
+## Core Technologies
+- Next.js 14
+- TypeScript
+- PostgreSQL
+- Prisma ORM
+- TailwindCSS
+- Shadcn/ui
+
+## Development Guidelines
+- Follow TypeScript best practices
+- Use React Server Components when possible
+- Implement proper error handling
+- Follow REST API conventions
+- Document all major functions

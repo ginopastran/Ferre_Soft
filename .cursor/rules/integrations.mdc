@@ -1,0 +1,22 @@
+---
+description: Integrations
+globs: src/lib/afip/**/*.ts, src/lib/printer/**/*.ts, pages/api/afip/**/*.ts
+---
+ # Integration Rules
+
+## AFIP Integration
+- Use AFIP SDK for electronic invoicing
+- Implement proper error handling
+- Cache AFIP responses
+- Handle offline scenarios
+
+## Fiscal Printer
+- Support for multiple printer models
+- Queue system for print jobs
+- Offline printing capability
+- Receipt templates
+
+## External Services
+- MercadoPago integration
+- Email service integration
+- SMS notifications

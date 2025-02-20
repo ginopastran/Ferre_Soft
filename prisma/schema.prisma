@@ -1,0 +1,245 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+// Prisma schema para la base de datos de la ferretería
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Sucursal {
+  id         Int           @id @default(autoincrement())
+  nombre     String
+  ubicacion  String
+  usuarios   Usuario[]
+  ordenes    OrdenCompra[]
+  CierreCaja CierreCaja[]
+}
+
+model Rol {
+  id       Int       @id @default(autoincrement())
+  nombre   String    @unique
+  usuarios Usuario[]
+}
+
+model Usuario {
+  id         Int           @id @default(autoincrement())
+  nombre     String
+  dni        String        @unique
+  telefono   String?
+  email      String        @unique
+  password   String
+  creadoEn   DateTime      @default(now())
+  sucursal   Sucursal?     @relation(fields: [sucursalId], references: [id])
+  sucursalId Int?
+  rol        Rol?          @relation(fields: [rolId], references: [id])
+  rolId      Int?
+  ordenes    OrdenCompra[]
+  CierreCaja CierreCaja[]
+  Factura    Factura[]
+}
+
+model Producto {
+  id              Int              @id @default(autoincrement())
+  codigo          String           @unique
+  codigoProveedor String
+  rubro           String // Mantenemos rubro como string
+  descripcion     String
+  proveedor       String
+  precioCosto     Float
+  iva             Float            @default(21)
+  margenGanancia1 Float
+  precioFinal1    Float
+  margenGanancia2 Float
+  precioFinal2    Float
+  imagenUrl       String?
+  stock           Int              @default(0)
+  creadoEn        DateTime         @default(now())
+  actualizadoEn   DateTime         @updatedAt
+  detallesOrden   DetalleOrden[]
+  DetalleFactura  DetalleFactura[]
+
+  @@index([codigo])
+  @@index([codigoProveedor])
+  @@index([rubro])
+}
+
+model OrdenCompra {
+  id         Int            @id @default(autoincrement())
+  sucursalId Int
+  vendedorId Int?
+  total      Float
+  metodoPago String
+  fecha      DateTime       @default(now())
+  estado     String         @default("PENDIENTE")
+  sucursal   Sucursal       @relation(fields: [sucursalId], references: [id])
+  vendedor   Usuario?       @relation(fields: [vendedorId], references: [id])
+  detalles   DetalleOrden[]
+}
+
+model DetalleOrden {
+  id              Int         @id @default(autoincrement())
+  orden           OrdenCompra @relation(fields: [ordenId], references: [id])
+  ordenId         Int
+  producto        Producto    @relation(fields: [productoId], references: [id])
+  productoId      Int
+  cantidad        Float
+  subtotal        Float
+  costo           Float
+  precioHistorico Float
+}
+
+model Chat {
+  id         String    @id @default(uuid())
+  createdAt  DateTime  @default(now())
+  title      String
+  userId     String
+  visibility String    @default("private")
+  messages   Message[]
+  votes      Vote[]
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  chatId    String
+  role      String
+  content   Json
+  createdAt DateTime @default(now())
+  chat      Chat     @relation(fields: [chatId], references: [id])
+  votes     Vote[]
+}
+
+model Vote {
+  chatId    String
+  messageId String
+  isUpvoted Boolean
+  chat      Chat    @relation(fields: [chatId], references: [id])
+  message   Message @relation(fields: [messageId], references: [id])
+
+  @@id([chatId, messageId])
+}
+
+model Document {
+  id          String       @id @default(uuid())
+  createdAt   DateTime     @default(now())
+  title       String
+  content     String?
+  kind        String       @default("text")
+  userId      String
+  suggestions Suggestion[]
+}
+
+model Suggestion {
+  id                String   @id @default(uuid())
+  documentId        String
+  documentCreatedAt DateTime
+  originalText      String
+  suggestedText     String
+  description       String?
+  isResolved        Boolean  @default(false)
+  userId            String
+  createdAt         DateTime @default(now())
+  document          Document @relation(fields: [documentId], references: [id])
+}
+
+model CierreCaja {
+  id              Int      @id @default(autoincrement())
+  vendedorId      Int
+  sucursalId      Int
+  fechaInicio     DateTime
+  fechaCierre     DateTime
+  periodo         String
+  totalVentas     Float
+  cantidadVentas  Int
+  ventasPorMetodo Json?
+  vendedor        Usuario  @relation(fields: [vendedorId], references: [id])
+  sucursal        Sucursal @relation(fields: [sucursalId], references: [id])
+}
+
+model TicketPendiente {
+  id        Int      @id @default(autoincrement())
+  orderData Json
+  estado    String   @default("PENDIENTE")
+  createdAt DateTime @default(now())
+}
+
+model Cliente {
+  id           Int       @id @default(autoincrement())
+  codigo       String    @unique
+  nombre       String
+  direccion    String
+  pais         String
+  provincia    String
+  localidad    String
+  situacionIVA String
+  cuitDni      String    @unique
+  telefono     String?
+  email        String?
+  creadoEn     DateTime  @default(now())
+  Factura      Factura[]
+}
+
+// Modelo para sugerencias de rubros
+model Rubro {
+  id            Int      @id @default(autoincrement())
+  nombre        String   @unique
+  descripcion   String?
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+}
+
+model Proveedor {
+  id            Int      @id @default(autoincrement())
+  nombre        String   @unique
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+}
+
+// Modificar el modelo existente de OrdenCompra para convertirlo en Factura
+model Factura {
+  id              String           @id @default(cuid())
+  numero          String           @unique
+  fecha           DateTime         @default(now())
+  vendedorId      Int
+  clienteId       Int
+  tipoComprobante String // "FACTURA_A", "REMITO", "NOTA_CREDITO_A"
+  total           Float
+  pagado          Float            @default(0)
+  estado          String // "PENDIENTE", "PAGADA", "ANULADA"
+  detalles        DetalleFactura[]
+  vendedor        Usuario          @relation(fields: [vendedorId], references: [id])
+  cliente         Cliente          @relation(fields: [clienteId], references: [id])
+  creadoEn        DateTime         @default(now())
+  actualizadoEn   DateTime         @updatedAt
+  pagos           PagoFactura[]
+}
+
+model DetalleFactura {
+  id             Int      @id @default(autoincrement())
+  facturaId      String
+  productoId     Int
+  cantidad       Int
+  precioUnitario Float
+  subtotal       Float
+  factura        Factura  @relation(fields: [facturaId], references: [id])
+  producto       Producto @relation(fields: [productoId], references: [id])
+}
+
+model PagoFactura {
+  id            String   @id @default(cuid())
+  facturaId     String
+  factura       Factura  @relation(fields: [facturaId], references: [id])
+  fecha         DateTime @default(now())
+  monto         Float
+  metodoPago    String
+  observaciones String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}

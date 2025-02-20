@@ -1,0 +1,26 @@
+---
+description: Database
+globs: prisma/schema.prisma, src/lib/prisma.ts, pages/api/**/*.ts
+---
+ # Database Rules
+
+## Schema Guidelines
+- Use meaningful names in Spanish
+- Follow Prisma naming conventions
+- Implement proper relations
+- Use appropriate field types
+- Add proper indexes
+
+## Main Entities
+- Producto
+- Cliente
+- Usuario
+- Sucursal
+- OrdenCompra
+- Factura
+- CierreCaja
+
+## Relationships
+- Each Sucursal has many Usuarios
+- Each OrdenCompra belongs to one Cliente
+- Each Factura relates to one OrdenCompra

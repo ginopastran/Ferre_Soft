@@ -1,0 +1,26 @@
+---
+description: Features of the app
+globs: src/app/**/page.tsx, src/components/**/*.tsx, src/lib/features/**/*.ts
+---
+ # Feature Rules
+
+## Core Features
+- Product management
+- Client management
+- Sales and billing
+- Stock control
+- User authentication
+- Branch management
+- Electronic invoicing
+
+## AFIP Integration
+- Electronic invoice generation
+- CUIT validation
+- Taxpayer verification
+- Fiscal printer support
+
+## Business Rules
+- Stock management per branch
+- Role-based access control
+- Sales reporting
+- Cash register closing
