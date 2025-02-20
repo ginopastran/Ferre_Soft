@@ -23,7 +23,6 @@ import { toast } from "sonner";
 import { useUrlParams } from "@/hooks/useUrlParams";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Product } from "@/types/product";
-import { ProductTable } from "@/components/admin/productos/ProductTable";
 import { SortDialog } from "@/components/admin/productos/SortDialog";
 import { FilterDialog } from "@/components/admin/productos/FilterDialog";
 import { cn } from "@/lib/utils";
