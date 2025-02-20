@@ -181,23 +181,33 @@ function ProductosContent() {
       let aValue = a[sortField as keyof Product];
       let bValue = b[sortField as keyof Product];
 
+      // Manejar fechas
+      if (aValue instanceof Date) {
+        return sortOrder === "asc"
+          ? aValue.getTime() - (bValue as Date).getTime()
+          : (bValue as Date).getTime() - aValue.getTime();
+      }
+
+      // Convertir a string o número para comparación
+      aValue = (aValue as string | number) || "";
+      bValue = (bValue as string | number) || "";
+
       if (typeof aValue === "string") {
         aValue = aValue.toLowerCase();
         bValue = (bValue as string).toLowerCase();
       }
 
       if (["pricePerUnit", "price"].includes(sortField)) {
-        aValue = Number(aValue);
-        bValue = Number(bValue);
+        aValue = Number(aValue) || 0;
+        bValue = Number(bValue) || 0;
       }
 
       if (sortField === "margen") {
-        aValue = parseFloat(aValue as string);
-        bValue = parseFloat(bValue as string);
+        aValue = parseFloat(aValue as string) || 0;
+        bValue = parseFloat(bValue as string) || 0;
       }
 
       const comparison = aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
-
       return sortOrder === "asc" ? comparison : -comparison;
     });
   };
@@ -206,9 +216,8 @@ function ProductosContent() {
     return products.filter((product) => {
       const matchesSearch =
         !searchTerm ||
-        product.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesUnit = filterUnit === "all" || product.unit === filterUnit;
-      return matchesSearch && matchesUnit;
+        product.descripcion.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesSearch;
     });
   };
 
