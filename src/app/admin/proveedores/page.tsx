@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { AppSidebar } from "@/components/admin/app-sidebar";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,7 +40,7 @@ interface Proveedor {
   email?: string;
 }
 
-export default function ProveedoresPage() {
+function ProveedoresContent() {
   const { setUrlParam, getUrlParam } = useUrlParams();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -246,5 +247,13 @@ export default function ProveedoresPage() {
         />
       </SidebarInset>
     </SidebarProvider>
+  );
+}
+
+export default function ProveedoresPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ProveedoresContent />
+    </Suspense>
   );
 }
