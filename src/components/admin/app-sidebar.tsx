@@ -57,6 +57,11 @@ const data = {
       url: "/admin/productos",
       icon: Package,
     },
+    {
+      title: "Proveedores",
+      url: "/admin/proveedores",
+      icon: Building2,
+    },
     // {
     //   title: "Historial",
     //   url: "/admin/historial",

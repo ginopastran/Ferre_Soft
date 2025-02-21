@@ -198,6 +198,11 @@ model Rubro {
 model Proveedor {
   id            Int      @id @default(autoincrement())
   nombre        String   @unique
+  codigo        String?  @unique
+  telefono      String?
+  email         String?
+  cuitDni       String?  @unique
+  direccion     String?
   creadoEn      DateTime @default(now())
   actualizadoEn DateTime @updatedAt
 }

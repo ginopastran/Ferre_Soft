@@ -25,7 +25,7 @@ export function ProductCard({ product, onViewDetails }: ProductCardProps) {
             </div>
           )}
         </div>
-        <div className="flex justify-between items-start mb-4">
+        <div className="flex justify-between items-start my-4">
           <div>
             <h2 className="text-2xl font-semibold text-indigo-gradient">
               {product.descripcion}

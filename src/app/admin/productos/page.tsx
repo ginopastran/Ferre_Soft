@@ -58,7 +58,6 @@ function ProductosContent() {
   const [isSortDialogOpen, setIsSortDialogOpen] = useState(false);
   const [isClearingFilters, setIsClearingFilters] = useState(false);
   const [isRubroDialogOpen, setIsRubroDialogOpen] = useState(false);
-  const [isProveedorDialogOpen, setIsProveedorDialogOpen] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
   const productsPerPage = 20;
@@ -290,21 +289,6 @@ function ProductosContent() {
     }
   };
 
-  const handleCreateProveedor = async (data: { nombre: string }) => {
-    try {
-      const response = await fetch("/api/proveedores", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) throw new Error("Error al crear el proveedor");
-    } catch (error) {
-      console.error("Error:", error);
-      throw error;
-    }
-  };
-
   return (
     <>
       <header className="flex h-12 md:h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
@@ -379,13 +363,6 @@ function ProductosContent() {
                 >
                   <FolderPlus className="h-4 w-4 mr-2" />
                   Nuevo Rubro
-                </Button>
-                <Button
-                  onClick={() => setIsProveedorDialogOpen(true)}
-                  className="bg-indigo-gradient"
-                >
-                  <Truck className="h-4 w-4 mr-2" />
-                  Nuevo Proveedor
                 </Button>
                 <Button
                   onClick={() => setIsDialogOpen(true)}
@@ -472,12 +449,6 @@ function ProductosContent() {
         open={isRubroDialogOpen}
         onOpenChange={setIsRubroDialogOpen}
         onSubmit={handleCreateRubro}
-      />
-
-      <ProveedorDialog
-        open={isProveedorDialogOpen}
-        onOpenChange={setIsProveedorDialogOpen}
-        onSubmit={handleCreateProveedor}
       />
     </>
   );

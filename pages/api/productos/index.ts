@@ -3,6 +3,15 @@ import { NextApiRequest, NextApiResponse } from "next";
 import cors from "cors";
 import { uploadImage } from "@/lib/cloudinary";
 
+// Configurar el límite del body parser
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: "2mb",
+    },
+  },
+};
+
 const corsMiddleware = cors({
   origin: process.env.ALLOWED_ORIGIN || "http://localhost:5173",
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
