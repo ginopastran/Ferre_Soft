@@ -27,17 +27,19 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { ProveedorDialog } from "../../productos/components/ProveedorDialog";
 import { ActualizarPreciosDialog } from "../components/ActualizarPreciosDialog";
+import { Proveedor } from "@prisma/client";
 
-interface Proveedor {
-  id: number;
-  nombre: string;
-  codigo?: string;
-  direccion?: string;
-  cuitDni?: string;
-  telefono?: string;
-  email?: string;
-  creadoEn: Date;
-}
+// interface Proveedor {
+//   id: number;
+//   nombre: string;
+//   codigo?: string;
+//   direccion?: string;
+//   cuitDni?: string;
+//   telefono?: string;
+//   email?: string;
+//   creadoEn: Date;
+//   actualizadoEn: Date;
+// }
 
 export default function ProveedorPage() {
   const params = useParams();
@@ -74,11 +76,8 @@ export default function ProveedorPage() {
       });
 
       if (!response.ok) throw new Error("Error al actualizar el proveedor");
-
       await fetchProveedor();
-      toast.success("Proveedor actualizado exitosamente");
     } catch (error) {
-      toast.error("Error al actualizar el proveedor");
       throw error;
     }
   };

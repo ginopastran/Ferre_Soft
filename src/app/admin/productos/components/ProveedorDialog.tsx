@@ -71,9 +71,17 @@ export function ProveedorDialog({
         direccion: "",
       });
       onOpenChange(false);
-      toast.success("Proveedor creado exitosamente");
+      toast.success(
+        mode === "edit"
+          ? "Proveedor actualizado exitosamente"
+          : "Proveedor creado exitosamente"
+      );
     } catch (error) {
-      toast.error("Error al crear el proveedor");
+      toast.error(
+        mode === "edit"
+          ? "Error al actualizar el proveedor"
+          : "Error al crear el proveedor"
+      );
     } finally {
       setIsLoading(false);
     }
