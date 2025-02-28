@@ -23,6 +23,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Suspense } from "react";
 
 interface Factura {
   id: string;
@@ -292,7 +293,9 @@ export default function VentasPage() {
     <SidebarProvider>
       <AppSidebar activeUrl="/admin/ventas" />
       <SidebarInset>
-        <VentasContent />
+        <Suspense fallback={<div>Cargando...</div>}>
+          <VentasContent />
+        </Suspense>
       </SidebarInset>
     </SidebarProvider>
   );
