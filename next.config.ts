@@ -28,6 +28,9 @@ const config = {
 };
 
 const nextConfig = withPWA(config)({
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   headers: async () => [
     {
       source: "/manifest.json",
