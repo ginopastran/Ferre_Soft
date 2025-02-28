@@ -43,6 +43,7 @@ import { Building2 } from "lucide-react";
 import { PagoVendedorDialog } from "./components/PagoVendedorDialog";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Input } from "@/components/ui/input";
+import { Suspense } from "react";
 
 interface Vendedor {
   id: number;
@@ -405,7 +406,9 @@ export default function VendedoresPage() {
     <SidebarProvider>
       <AppSidebar activeUrl="/admin/vendedores" />
       <SidebarInset>
-        <VendedoresContent />
+        <Suspense fallback={<div>Cargando...</div>}>
+          <VendedoresContent />
+        </Suspense>
       </SidebarInset>
     </SidebarProvider>
   );
