@@ -19,6 +19,8 @@ import {
   Users,
   Receipt,
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useMemo } from "react";
 
 import {
   Sidebar,
@@ -72,15 +74,15 @@ const data = {
     //   url: "/admin/sucursales",
     //   icon: Building2,
     // },
-    // {
-    //   title: "Vendedores",
-    //   url: "/admin/vendedores",
-    //   icon: Users,
-    // },
     {
       title: "Ventas",
       url: "/admin/ventas",
       icon: Receipt,
+    },
+    {
+      title: "Vendedores",
+      url: "/admin/vendedores",
+      icon: Users,
     },
     // {
     //   title: "Settings",
@@ -90,17 +92,68 @@ const data = {
   ],
 };
 
-export function AppSidebar({
-  activeUrl,
-  ...props
-}: React.ComponentProps<typeof Sidebar> & { activeUrl: string }) {
+interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
+  activeUrl: string;
+}
+
+export function AppSidebar({ activeUrl, ...props }: AppSidebarProps) {
+  const { user } = useAuth();
+  const isVendedor = user?.rol?.nombre === "VENDEDOR";
+
+  const navItems = useMemo(() => {
+    if (isVendedor) {
+      // Mostrar solo la opción de ventas para vendedores
+      return [
+        {
+          title: "Ventas",
+          url: "/admin/ventas",
+          icon: Receipt,
+        },
+      ];
+    }
+
+    // Mostrar todas las opciones para administradores
+    return [
+      {
+        title: "Reporte",
+        url: "/admin/reporte",
+        icon: ChartPie,
+      },
+      {
+        title: "Clientes",
+        url: "/admin/clientes",
+        icon: Users,
+      },
+      {
+        title: "Productos",
+        url: "/admin/productos",
+        icon: Package,
+      },
+      {
+        title: "Proveedores",
+        url: "/admin/proveedores",
+        icon: Building2,
+      },
+      {
+        title: "Ventas",
+        url: "/admin/ventas",
+        icon: Receipt,
+      },
+      {
+        title: "Vendedores",
+        url: "/admin/vendedores",
+        icon: Users,
+      },
+    ];
+  }, [isVendedor]);
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <TeamSwitcher teams={data.teams} />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} activeUrl={activeUrl} />
+        <NavMain items={navItems} activeUrl={activeUrl} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser />

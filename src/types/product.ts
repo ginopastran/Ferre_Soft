@@ -2,6 +2,7 @@ export interface Product {
   id: number;
   codigo: string;
   codigoProveedor: string;
+  codigoBarras: string | null;
   rubro: string;
   descripcion: string;
   proveedor: string;

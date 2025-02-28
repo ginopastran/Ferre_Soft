@@ -27,6 +27,7 @@ export function NavUser() {
   const router = useRouter();
   const { user } = useAuth();
   const pathname = usePathname();
+  const isAdmin = user?.rol?.nombre === "ADMIN";
 
   if (!user) return null;
 
@@ -34,13 +35,20 @@ export function NavUser() {
     try {
       const response = await fetch("/api/auth/logout", {
         method: "POST",
+        credentials: "include",
       });
 
       if (!response.ok) throw new Error("Error al cerrar sesión");
 
+      // Limpiar cookies del cliente
+      document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+      document.cookie =
+        "userData=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+
       router.push("/login");
       toast.success("Sesión cerrada exitosamente");
     } catch (error) {
+      console.error("Error al cerrar sesión:", error);
       toast.error("Error al cerrar sesión");
     }
   };
@@ -48,19 +56,21 @@ export function NavUser() {
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <Link href={"/admin/paltai"}>
-          <SidebarMenuButton
-            tooltip={"Chat Paltai"}
-            className={`group-data-[collapsible=icon]:!p-1.5 flex items-center text-base [&>svg]:size-5 hover:bg-indigo-gradient hover:text-white transition-all duration-300 ease-in-out active:bg-indigo-600 active:text-white py-5 mb-1 ${
-              pathname === "/admin/paltai"
-                ? "font-medium text-white bg-indigo-gradient"
-                : " text-muted-foreground"
-            }`}
-          >
-            {<Bot />}
-            {"Chat Palt.AI"}
-          </SidebarMenuButton>
-        </Link>
+        {isAdmin && (
+          <Link href={"/admin/paltai"}>
+            <SidebarMenuButton
+              tooltip={"Chat Paltai"}
+              className={`group-data-[collapsible=icon]:!p-1.5 flex items-center text-base [&>svg]:size-5 hover:bg-indigo-gradient hover:text-white transition-all duration-300 ease-in-out active:bg-indigo-600 active:text-white py-5 mb-1 ${
+                pathname === "/admin/paltai"
+                  ? "font-medium text-white bg-indigo-gradient"
+                  : " text-muted-foreground"
+              }`}
+            >
+              {<Bot />}
+              {"Chat Palt.AI"}
+            </SidebarMenuButton>
+          </Link>
+        )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton

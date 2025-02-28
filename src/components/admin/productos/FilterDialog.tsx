@@ -13,20 +13,39 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useState, useEffect } from "react";
 
 interface FilterDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  filterUnit: string;
+  filterRubro: string;
   onFilterChange: (value: string) => void;
 }
 
 export const FilterDialog: React.FC<FilterDialogProps> = ({
   isOpen,
   onClose,
-  filterUnit,
+  filterRubro,
   onFilterChange,
 }) => {
+  const [rubros, setRubros] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchRubros = async () => {
+      try {
+        const response = await fetch("/api/rubros");
+        const data = await response.json();
+        setRubros(data.map((r: any) => r.nombre));
+      } catch (error) {
+        console.error("Error al cargar rubros:", error);
+      }
+    };
+
+    if (isOpen) {
+      fetchRubros();
+    }
+  }, [isOpen]);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-[90vw] md:w-full rounded-xl">
@@ -37,20 +56,23 @@ export const FilterDialog: React.FC<FilterDialogProps> = ({
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Tipo de medida</label>
+            <label className="text-sm font-medium">Rubro</label>
             <Select
-              value={filterUnit}
+              value={filterRubro}
               onValueChange={(value) => {
                 onFilterChange(value);
               }}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Seleccionar tipo" />
+                <SelectValue placeholder="Seleccionar rubro" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="Unidad">Unidad</SelectItem>
-                <SelectItem value="Kg">Kg</SelectItem>
+                {rubros.map((rubro) => (
+                  <SelectItem key={rubro} value={rubro}>
+                    {rubro}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

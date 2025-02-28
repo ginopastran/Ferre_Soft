@@ -14,6 +14,7 @@ export async function middleware(req: NextRequest) {
     req.nextUrl.pathname.startsWith("/workbox-") ||
     req.nextUrl.pathname.includes("worker") ||
     req.nextUrl.pathname === "/offline" ||
+    req.nextUrl.pathname.startsWith("/api/") ||
     req.headers.get("online") === "false"
   ) {
     if (req.nextUrl.pathname === "/sw.js") {
@@ -25,9 +26,10 @@ export async function middleware(req: NextRequest) {
   }
 
   const token = req.cookies.get("token");
+  const userData = req.cookies.get("userData");
 
-  // Redirigir a login si no hay token (excepto para rutas públicas)
-  if (!token || !token.value) {
+  // Redirigir a login si no hay token o userData
+  if (!token?.value || !userData?.value) {
     if (req.nextUrl.pathname === "/") {
       return NextResponse.redirect(new URL("/login", req.url));
     }
@@ -44,22 +46,41 @@ export async function middleware(req: NextRequest) {
       new TextEncoder().encode(process.env.JWT_SECRET)
     );
 
-    if (!payload.email || !payload.role) {
-      throw new Error("Token inválido");
+    const user = JSON.parse(userData.value);
+
+    if (!user.email || !user.rol) {
+      throw new Error("Datos de usuario inválidos");
     }
 
     // Redirecciones específicas
     if (req.nextUrl.pathname === "/") {
-      if (payload.role === "ADMIN") {
+      if (user.rol.nombre === "ADMIN") {
         return NextResponse.redirect(new URL("/admin/reporte", req.url));
-      } else {
-        return NextResponse.redirect(new URL("/cart", req.url));
+      } else if (user.rol.nombre === "VENDEDOR") {
+        return NextResponse.redirect(new URL("/admin/ventas", req.url));
+      }
+    }
+
+    // Proteger rutas de admin
+    if (req.nextUrl.pathname.startsWith("/admin")) {
+      if (user.rol.nombre === "VENDEDOR") {
+        // Si es vendedor, solo permitir acceso a /admin/ventas
+        if (!req.nextUrl.pathname.startsWith("/admin/ventas")) {
+          return NextResponse.redirect(new URL("/admin/ventas", req.url));
+        }
+      } else if (user.rol.nombre !== "ADMIN") {
+        // Si no es admin ni vendedor, redirigir a login
+        return NextResponse.redirect(new URL("/login", req.url));
       }
     }
 
     return NextResponse.next();
   } catch (error) {
-    return NextResponse.redirect(new URL("/login", req.url));
+    // Limpiar cookies y redirigir a login
+    const response = NextResponse.redirect(new URL("/login", req.url));
+    response.cookies.delete("token");
+    response.cookies.delete("userData");
+    return response;
   }
 }
 

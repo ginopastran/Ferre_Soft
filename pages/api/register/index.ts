@@ -7,7 +7,8 @@ export default async function handler(
   res: NextApiResponse
 ) {
   if (req.method === "POST") {
-    const { nombre, email, password, telefono, dni } = req.body;
+    const { nombre, email, password, telefono, dni, comision, sucursalId } =
+      req.body;
 
     if (!nombre || !email || !password || !dni) {
       return res.status(400).json({ message: "Faltan campos requeridos" });
@@ -72,6 +73,19 @@ export default async function handler(
             .json({ message: "Configuración inicial faltante" });
         }
 
+        // Verificar si ya existe un usuario con ese email o dni
+        const existingUser = await prisma.usuario.findFirst({
+          where: {
+            OR: [{ email }, { dni }],
+          },
+        });
+
+        if (existingUser) {
+          return res.status(400).json({
+            message: "Ya existe un usuario con ese email o DNI",
+          });
+        }
+
         const hashedPassword = await bcrypt.hash(password, 10);
         const newUser = await prisma.usuario.create({
           data: {
@@ -81,16 +95,14 @@ export default async function handler(
             telefono,
             dni,
             rolId: roleVendedor.id,
-            sucursalId: sucursalPrincipal.id,
+            sucursalId: sucursalId || sucursalPrincipal.id,
+            comision: Number(comision) || 0,
           },
         });
 
-        return res.status(201).json({
-          id: newUser.id,
-          nombre: newUser.nombre,
-          email: newUser.email,
-          rol: "VENDEDOR",
-        });
+        // Removemos la contraseña de la respuesta
+        const { password: _, ...userWithoutPassword } = newUser;
+        return res.status(201).json(userWithoutPassword);
       }
     } catch (error) {
       console.error("Error en registro:", error);

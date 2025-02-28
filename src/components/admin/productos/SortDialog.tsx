@@ -48,10 +48,10 @@ export const SortDialog: React.FC<SortDialogProps> = ({
             <Button
               variant="outline"
               className="w-full justify-between"
-              onClick={() => onSort("name")}
+              onClick={() => onSort("descripcion")}
             >
               Nombre
-              {sortField === "name" && (
+              {sortField === "descripcion" && (
                 <span>{sortOrder === "asc" ? "A-Z ↑" : "Z-A ↓"}</span>
               )}
             </Button>
@@ -59,36 +59,10 @@ export const SortDialog: React.FC<SortDialogProps> = ({
             <Button
               variant="outline"
               className="w-full justify-between"
-              onClick={() => onSort("pricePerUnit")}
+              onClick={() => onSort("precioCosto")}
             >
               Costo
-              {sortField === "pricePerUnit" && (
-                <span>
-                  {sortOrder === "asc" ? "Menor-Mayor ↑" : "Mayor-Menor ↓"}
-                </span>
-              )}
-            </Button>
-
-            <Button
-              variant="outline"
-              className="w-full justify-between"
-              onClick={() => onSort("margen")}
-            >
-              Margen
-              {sortField === "margen" && (
-                <span>
-                  {sortOrder === "asc" ? "Menor-Mayor ↑" : "Mayor-Menor ↓"}
-                </span>
-              )}
-            </Button>
-
-            <Button
-              variant="outline"
-              className="w-full justify-between"
-              onClick={() => onSort("price")}
-            >
-              Precio
-              {sortField === "price" && (
+              {sortField === "precioCosto" && (
                 <span>
                   {sortOrder === "asc" ? "Menor-Mayor ↑" : "Mayor-Menor ↓"}
                 </span>

@@ -49,28 +49,17 @@ export default async function handler(
   if (req.method === "POST") {
     try {
       const data = req.body;
-      let imagenUrl = null;
+      let imagenUrl = data.imagenUrl;
 
-      if (data.imagenUrl) {
-        try {
-          imagenUrl = await uploadImage(data.imagenUrl);
-          if (!imagenUrl) {
-            return res.status(400).json({
-              error: "Error al subir la imagen a Cloudinary",
-            });
-          }
-        } catch (error) {
-          console.error("Error de Cloudinary:", error);
-          return res.status(400).json({
-            error: "Error al procesar la imagen",
-          });
-        }
+      if (data.imagenUrl && data.imagenUrl.startsWith("data:image")) {
+        imagenUrl = await uploadImage(data.imagenUrl);
       }
 
       const producto = await prisma.producto.create({
         data: {
           codigo: data.codigo,
           codigoProveedor: data.codigoProveedor,
+          codigoBarras: data.codigoBarras || null,
           rubro: data.rubro,
           descripcion: data.descripcion,
           proveedor: data.proveedor,

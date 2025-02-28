@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Eye, DollarSign } from "lucide-react";
+import { FileText, Eye, DollarSign, User2, Users } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/format";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
@@ -19,13 +19,18 @@ interface FacturaCardProps {
     cliente: {
       nombre: string;
     };
+    vendedor?: {
+      nombre: string;
+    };
   };
+  showVendedor?: boolean;
   onViewDetails: (id: string) => void;
-  onUpdate?: () => void;
+  onUpdate: () => void;
 }
 
 export function FacturaCard({
   factura,
+  showVendedor,
   onViewDetails,
   onUpdate,
 }: FacturaCardProps) {
@@ -67,12 +72,22 @@ export function FacturaCard({
         </div>
 
         <div className="space-y-2 mb-4">
-          <div className="flex items-center">
-            <span className="text-base">
-              Cliente:{" "}
-              <span className="text-base ">{factura.cliente.nombre}</span>
-            </span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <User2 className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Cliente:</span>
+              <span className="text-sm">{factura.cliente.nombre}</span>
+            </div>
           </div>
+
+          {showVendedor && factura.vendedor && (
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Vendedor:</span>
+              <span className="text-sm">{factura.vendedor.nombre}</span>
+            </div>
+          )}
+
           <div className="flex items-center">
             <FileText className="h-4 w-4 mr-2 text-muted-foreground" />
             <span>{factura.tipoComprobante}</span>
@@ -88,7 +103,7 @@ export function FacturaCard({
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-col md:flex-row gap-2">
           <Button
             variant="outline"
             className="flex-1 bg-indigo-gradient text-white hover:text-white"
@@ -116,7 +131,7 @@ export function FacturaCard({
           facturaNumero={factura.numero}
           total={factura.total}
           pagado={factura.pagado}
-          onPagoComplete={onUpdate || (() => {})}
+          onPagoComplete={onUpdate}
         />
       </CardContent>
     </Card>

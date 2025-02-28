@@ -30,26 +30,29 @@ model Rol {
 }
 
 model Usuario {
-  id         Int           @id @default(autoincrement())
-  nombre     String
-  dni        String        @unique
-  telefono   String?
-  email      String        @unique
-  password   String
-  creadoEn   DateTime      @default(now())
-  sucursal   Sucursal?     @relation(fields: [sucursalId], references: [id])
-  sucursalId Int?
-  rol        Rol?          @relation(fields: [rolId], references: [id])
-  rolId      Int?
-  ordenes    OrdenCompra[]
-  CierreCaja CierreCaja[]
-  Factura    Factura[]
+  id             Int            @id @default(autoincrement())
+  nombre         String
+  dni            String         @unique
+  telefono       String?
+  email          String         @unique
+  password       String
+  comision       Float          @default(0)
+  creadoEn       DateTime       @default(now())
+  sucursal       Sucursal?      @relation(fields: [sucursalId], references: [id])
+  sucursalId     Int?
+  rol            Rol?           @relation(fields: [rolId], references: [id])
+  rolId          Int?
+  ordenes        OrdenCompra[]
+  CierreCaja     CierreCaja[]
+  Factura        Factura[]
+  pagosRecibidos PagoVendedor[]
 }
 
 model Producto {
   id              Int              @id @default(autoincrement())
   codigo          String           @unique
   codigoProveedor String
+  codigoBarras    String?          @unique
   rubro           String // Mantenemos rubro como string
   descripcion     String
   proveedor       String
@@ -68,6 +71,7 @@ model Producto {
 
   @@index([codigo])
   @@index([codigoProveedor])
+  @@index([codigoBarras])
   @@index([rubro])
 }
 
@@ -241,6 +245,18 @@ model PagoFactura {
   id            String   @id @default(cuid())
   facturaId     String
   factura       Factura  @relation(fields: [facturaId], references: [id])
+  fecha         DateTime @default(now())
+  monto         Float
+  metodoPago    String
+  observaciones String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model PagoVendedor {
+  id            String   @id @default(cuid())
+  vendedorId    Int
+  vendedor      Usuario  @relation(fields: [vendedorId], references: [id])
   fecha         DateTime @default(now())
   monto         Float
   metodoPago    String

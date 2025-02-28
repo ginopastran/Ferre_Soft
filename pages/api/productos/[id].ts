@@ -33,6 +33,7 @@ export default async function handler(
         data: {
           codigo: data.codigo,
           codigoProveedor: data.codigoProveedor,
+          codigoBarras: data.codigoBarras || null,
           rubro: data.rubro,
           descripcion: data.descripcion,
           proveedor: data.proveedor,

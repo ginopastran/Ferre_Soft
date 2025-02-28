@@ -13,10 +13,20 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils/format";
 import { PagoDialog } from "../components/PagoDialog";
-import { ArrowLeft, DollarSign, FileText } from "lucide-react";
+import {
+  ArrowLeft,
+  Code,
+  DollarSign,
+  FileText,
+  Hash,
+  User2,
+  Users,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { FacturaTabs } from "../components/FacturaTabs";
 import { FacturaSkeleton } from "../components/FacturaSkeleton";
+import { useAuth } from "@/contexts/AuthContext";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface DetalleFactura {
   id: number;
@@ -54,7 +64,7 @@ interface Factura {
   }>;
 }
 
-function FacturaContent() {
+function FacturaContent({ isAdmin }: { isAdmin: boolean }) {
   const params = useParams();
   const router = useRouter();
   const [factura, setFactura] = useState<Factura | null>(null);
@@ -131,15 +141,40 @@ function FacturaContent() {
             </div>
 
             <div className="grid grid-cols-2 gap-6 mb-6">
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <h3 className="text-lg font-semibold">Cliente</h3>
                 <p>{factura.cliente.nombre}</p>
                 <p className="text-sm text-muted-foreground">
                   Código: {factura.cliente.codigo}
                 </p>
+              </div> */}
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <User2 className="h-5 w-5 text-muted-foreground" />
+                  <span className="text-base text-muted-foreground">
+                    Cliente:
+                  </span>
+                  <span className="text-base">{factura.cliente.nombre}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Hash className="h-5 w-5 text-muted-foreground" />
+                  <span className="text-base text-muted-foreground">
+                    Código:
+                  </span>
+                  <span className="text-base">{factura.cliente.codigo}</span>
+                </div>
+                {isAdmin && (
+                  <div className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-muted-foreground" />
+                    <span className="text-base text-muted-foreground">
+                      Vendedor:
+                    </span>
+                    <span className="text-base">{factura.vendedor.nombre}</span>
+                  </div>
+                )}
               </div>
+
               <div className="space-y-2">
-                <h3 className="text-lg font-semibold">Información</h3>
                 <div className="flex items-center">
                   <FileText className="h-4 w-4 mr-2 text-muted-foreground" />
                   <span>{factura.tipoComprobante}</span>
@@ -192,11 +227,14 @@ function FacturaContent() {
 }
 
 export default function FacturaPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.rol?.nombre === "ADMIN";
+
   return (
     <SidebarProvider>
       <AppSidebar activeUrl="/admin/ventas" />
       <SidebarInset>
-        <FacturaContent />
+        <FacturaContent isAdmin={isAdmin} />
       </SidebarInset>
     </SidebarProvider>
   );

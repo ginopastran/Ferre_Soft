@@ -24,6 +24,8 @@ import { formatDNI, formatPhoneNumber } from "@/lib/utils/format";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { ClientDialog, ClienteForm } from "../components/ClientDialog";
+import { FacturaCard } from "@/components/admin/ventas/FacturaCard";
+import { FacturaSkeleton } from "../../ventas/components/FacturaSkeleton";
 
 interface Cliente {
   id: number;
@@ -40,16 +42,37 @@ interface Cliente {
   creadoEn: Date;
 }
 
+interface Factura {
+  id: string;
+  numero: string;
+  fecha: Date;
+  tipoComprobante: string;
+  total: number;
+  pagado: number;
+  estado: string;
+  cliente: {
+    nombre: string;
+  };
+}
+
 export default function ClientePage() {
   const params = useParams();
   const router = useRouter();
   const [client, setClient] = useState<Cliente | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [facturas, setFacturas] = useState<Factura[]>([]);
+  const [loadingFacturas, setLoadingFacturas] = useState(true);
 
   useEffect(() => {
     fetchClient();
   }, []);
+
+  useEffect(() => {
+    if (client) {
+      fetchFacturasCliente();
+    }
+  }, [client]);
 
   const fetchClient = async () => {
     try {
@@ -62,6 +85,20 @@ export default function ClientePage() {
       router.push("/admin/clientes");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchFacturasCliente = async () => {
+    try {
+      const response = await fetch(`/api/clientes/${params?.codigo}/facturas`);
+      if (!response.ok) throw new Error("Error al cargar facturas");
+      const data = await response.json();
+      setFacturas(data);
+    } catch (error) {
+      console.error("Error al cargar facturas:", error);
+      toast.error("Error al cargar facturas del cliente");
+    } finally {
+      setLoadingFacturas(false);
     }
   };
 
@@ -102,9 +139,9 @@ export default function ClientePage() {
               </Button>
             </div>
           </header>
-          <div className="h-full px-4 py-6 lg:px-8">
+          <div className="h-full px-4 py-6 lg:px-8 space-y-6">
             {loading ? (
-              <div className="flex justify-center items-center h-full">
+              <div className="flex justify-center items-center">
                 <Loader className="h-10 w-10 animate-spin" />
               </div>
             ) : (
@@ -205,6 +242,36 @@ export default function ClientePage() {
                 </CardContent>
               </Card>
             )}
+
+            <div className="space-y-4">
+              <h2 className="text-2xl font-bold text-indigo-gradient">
+                Historial de Facturas
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {loadingFacturas ? (
+                  <>
+                    <FacturaSkeleton />
+                    <FacturaSkeleton />
+                    <FacturaSkeleton />
+                  </>
+                ) : facturas.length > 0 ? (
+                  facturas.map((factura) => (
+                    <FacturaCard
+                      key={factura.id}
+                      factura={factura}
+                      onViewDetails={(id) => {
+                        router.push(`/admin/ventas/${factura.numero}`);
+                      }}
+                      onUpdate={fetchFacturasCliente}
+                    />
+                  ))
+                ) : (
+                  <div className="col-span-full text-center py-10 text-muted-foreground">
+                    No hay facturas para mostrar
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </SidebarInset>
       </SidebarProvider>

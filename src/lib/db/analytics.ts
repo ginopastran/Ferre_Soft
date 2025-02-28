@@ -8,8 +8,8 @@ interface SucursalData {
 
 export async function getBusinessData() {
   try {
-    const [ventas, productos, sucursales] = await Promise.all([
-      prisma.ordenCompra.findMany({
+    const [facturas, productos, sucursales] = await Promise.all([
+      prisma.factura.findMany({
         include: {
           detalles: {
             include: {
@@ -17,42 +17,49 @@ export async function getBusinessData() {
             },
           },
           vendedor: true,
-          sucursal: true,
+          cliente: true,
+          pagos: true,
         },
         orderBy: {
           fecha: "desc",
         },
         take: 100,
       }),
-      prisma.producto.findMany(),
+      prisma.producto.findMany({
+        where: {
+          stock: {
+            lte: 10, // Solo productos con stock bajo
+          },
+        },
+      }),
       prisma.sucursal.findMany(),
     ]);
 
     // Calcular datos mensuales
     const monthlyData = new Array(12).fill(0);
-    ventas.forEach((venta) => {
-      const date = new Date(venta.fecha);
+    facturas.forEach((factura) => {
+      const date = new Date(factura.fecha);
       const monthIndex = date.getMonth();
-      monthlyData[monthIndex] += venta.total;
+      monthlyData[monthIndex] += factura.total;
     });
 
     // Calcular métricas de rendimiento
-    const ventasEsteMes = ventas
-      .filter((venta) => {
-        const fecha = new Date(venta.fecha);
+    const ventasEsteMes = facturas
+      .filter((factura) => {
+        const fecha = new Date(factura.fecha);
         const hoy = new Date();
         return (
           fecha.getMonth() === hoy.getMonth() &&
           fecha.getFullYear() === hoy.getFullYear()
         );
       })
-      .reduce((sum, venta) => sum + venta.total, 0);
+      .reduce((sum, factura) => sum + factura.total, 0);
 
-    const margenGanancia = ventas.reduce((sum, venta) => {
+    const margenGanancia = facturas.reduce((sum, factura) => {
       return (
         sum +
-        venta.detalles.reduce((subtotal, detalle) => {
-          const costoTotal = detalle.costo * detalle.cantidad;
+        factura.detalles.reduce((subtotal, detalle) => {
+          const costoTotal = detalle.producto.precioCosto * detalle.cantidad;
           const ventaTotal = detalle.subtotal;
           return subtotal + (ventaTotal - costoTotal);
         }, 0)
@@ -61,28 +68,35 @@ export async function getBusinessData() {
 
     // Obtener métodos de pago
     const metodoPagoMap = new Map();
-    ventas.forEach((venta) => {
-      const actual = metodoPagoMap.get(venta.metodoPago) || 0;
-      metodoPagoMap.set(venta.metodoPago, actual + 1);
+    facturas.forEach((factura) => {
+      factura.pagos.forEach((pago) => {
+        const actual = metodoPagoMap.get(pago.metodoPago) || 0;
+        metodoPagoMap.set(pago.metodoPago, actual + 1);
+      });
     });
-    const totalVentas = ventas.length;
+    const totalPagos = Array.from(metodoPagoMap.values()).reduce(
+      (a, b) => a + b,
+      0
+    );
     const metodoPago = Object.fromEntries(
       Array.from(metodoPagoMap.entries()).map(([metodo, cantidad]) => [
         metodo,
-        ((cantidad as number) / totalVentas) * 100,
+        ((cantidad as number) / totalPagos) * 100,
       ])
     );
 
+    // Obtener clientes únicos
+    const clientesUnicos = new Set(facturas.map((f) => f.clienteId)).size;
+
     return {
-      ventas,
+      facturas,
       productos,
       sucursales,
       resumen: {
         totalVentas: ventasEsteMes,
-        cantidadClientes: ventas.length,
+        cantidadClientes: clientesUnicos,
         margenGanancia,
-        productosMasVendidos: obtenerProductosMasVendidos(ventas),
-        ventasPorSucursal: obtenerVentasPorSucursal(ventas),
+        productosMasVendidos: obtenerProductosMasVendidos(facturas),
         metodoPago,
         ventasMensuales: monthlyData,
         porcentajeVentas: calcularPorcentajeCambio(
@@ -90,8 +104,8 @@ export async function getBusinessData() {
           monthlyData[new Date().getMonth() - 1] || 0
         ),
         porcentajeClientes: calcularPorcentajeCambio(
-          ventas.length,
-          totalVentas
+          clientesUnicos,
+          facturas.length
         ),
       },
     };
@@ -106,44 +120,30 @@ function calcularPorcentajeCambio(actual: number, anterior: number) {
   return Number((((actual - anterior) / anterior) * 100).toFixed(2));
 }
 
-function obtenerProductosMasVendidos(ventas: any[]) {
+function obtenerProductosMasVendidos(facturas: any[]) {
   const productosMap = new Map();
 
-  ventas.forEach((venta) => {
-    venta.detalles.forEach((detalle: any) => {
-      const actual = productosMap.get(detalle.producto.nombre) || 0;
-      productosMap.set(detalle.producto.nombre, actual + detalle.cantidad);
+  facturas.forEach((factura) => {
+    factura.detalles.forEach((detalle: any) => {
+      const key = detalle.producto.descripcion;
+      const actual = productosMap.get(key) || {
+        cantidad: 0,
+        montoTotal: 0,
+      };
+
+      actual.cantidad += detalle.cantidad;
+      actual.montoTotal += detalle.subtotal;
+
+      productosMap.set(key, actual);
     });
   });
 
   return Array.from(productosMap.entries())
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 5);
-}
-
-function obtenerVentasPorSucursal(ventas: any[]) {
-  const sucursalesMap = new Map<string, SucursalData>();
-
-  ventas.forEach((venta) => {
-    const sucursalNombre = venta.sucursal.nombre;
-    const actual = sucursalesMap.get(sucursalNombre) || {
-      ventas: 0,
-      clientes: 0,
-      topProductos: [],
-    };
-
-    actual.ventas += venta.total;
-    actual.clientes += 1;
-
-    // Agregar productos vendidos
-    venta.detalles.forEach((detalle: any) => {
-      if (!actual.topProductos.includes(detalle.producto.nombre)) {
-        actual.topProductos.push(detalle.producto.nombre);
-      }
-    });
-
-    sucursalesMap.set(sucursalNombre, actual);
-  });
-
-  return Object.fromEntries(sucursalesMap);
+    .sort(([, a], [, b]) => b.montoTotal - a.montoTotal)
+    .slice(0, 5)
+    .map(([nombre, datos]) => ({
+      nombre,
+      cantidad: datos.cantidad,
+      montoTotal: datos.montoTotal,
+    }));
 }

@@ -7,18 +7,39 @@ export function ProductsGridSkeleton() {
       {[...Array(6)].map((_, i) => (
         <Card key={i} className="w-full">
           <CardContent className="p-6">
-            <div className="flex justify-between items-start mb-4">
-              <div className="space-y-2">
-                <Skeleton className="h-8 w-48" />
-                <Skeleton className="h-5 w-24" />
+            {/* Imagen */}
+            <div className="flex justify-center items-center mb-4">
+              <Skeleton className="w-40 h-40 rounded-md" />
+            </div>
+
+            {/* Título */}
+            <div className="flex justify-between items-start my-4">
+              <div>
+                <Skeleton className="h-8 w-48" /> {/* Descripción */}
               </div>
-              <Skeleton className="h-20 w-20 rounded-md" />
             </div>
+
+            {/* Detalles */}
             <div className="space-y-2 mb-4">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-4 w-28" />
-              <Skeleton className="h-4 w-36" />
+              <div className="flex items-center">
+                <Skeleton className="h-4 w-4 mr-2" /> {/* Icono */}
+                <Skeleton className="h-4 w-32" /> {/* Código */}
+              </div>
+              <div className="flex items-center">
+                <Skeleton className="h-4 w-4 mr-2" /> {/* Icono */}
+                <Skeleton className="h-4 w-40" /> {/* Código Proveedor */}
+              </div>
+              <div className="flex items-center">
+                <Skeleton className="h-4 w-4 mr-2" /> {/* Icono */}
+                <Skeleton className="h-4 w-44" /> {/* Código de Barras */}
+              </div>
+              <div className="flex items-center">
+                <Skeleton className="h-4 w-4 mr-2" /> {/* Icono */}
+                <Skeleton className="h-4 w-36" /> {/* Stock */}
+              </div>
             </div>
+
+            {/* Botón */}
             <Skeleton className="h-9 w-full" />
           </CardContent>
         </Card>

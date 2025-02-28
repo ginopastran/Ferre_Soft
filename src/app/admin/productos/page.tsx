@@ -7,7 +7,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Filter, List, Plus, X, FolderPlus, Truck } from "lucide-react";
+import { Filter, List, Plus, X, FolderPlus, Truck, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,7 +43,7 @@ function ProductosContent() {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState("creadoEn");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  const [filterUnit, setFilterUnit] = useState("all");
+  const [filterRubro, setFilterRubro] = useState("all");
 
   const activeUrl = "/admin/productos";
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -70,7 +70,7 @@ function ProductosContent() {
 
     const urlSort = getUrlParam("sort");
     const urlOrder = getUrlParam("order");
-    const urlUnit = getUrlParam("unit");
+    const urlRubro = getUrlParam("rubro");
     const urlSearch = getUrlParam("search");
 
     if (urlSort) {
@@ -85,10 +85,10 @@ function ProductosContent() {
       setSortOrder("desc");
     }
 
-    if (urlUnit) {
-      setFilterUnit(urlUnit);
+    if (urlRubro) {
+      setFilterRubro(urlRubro);
     } else {
-      setFilterUnit("all");
+      setFilterRubro("all");
     }
 
     if (urlSearch) {
@@ -106,22 +106,24 @@ function ProductosContent() {
       try {
         const response = await fetch("/api/productos");
         const data = await response.json();
-
+        console.log("Products from API:", data);
         const transformedProducts: Product[] = data.map((p: any) => ({
           id: p.id,
-          name: p.nombre || "",
-          pricePerUnit: p.costo || 0,
-          margen: (p.margenGanancia || 0).toString(),
-          price: p.precio || 0,
-          unit: p.tipoMedida || "",
-          creadoEn: p.creadoEn || new Date().toISOString(),
-          stock: p.stock || 0,
-          imagenUrl: p.imagenUrl || "",
           codigo: p.codigo || "",
           codigoProveedor: p.codigoProveedor || "",
+          codigoBarras: p.codigoBarras || null,
           rubro: p.rubro || "",
           descripcion: p.descripcion || "",
           proveedor: p.proveedor || "",
+          precioCosto: p.precioCosto || 0,
+          iva: p.iva || 21,
+          margenGanancia1: p.margenGanancia1 || 0,
+          precioFinal1: p.precioFinal1 || 0,
+          margenGanancia2: p.margenGanancia2 || 0,
+          precioFinal2: p.precioFinal2 || 0,
+          imagenUrl: p.imagenUrl || "",
+          stock: p.stock || 0,
+          creadoEn: new Date(p.creadoEn),
         }));
 
         setProductsList(transformedProducts);
@@ -195,14 +197,9 @@ function ProductosContent() {
         bValue = (bValue as string).toLowerCase();
       }
 
-      if (["pricePerUnit", "price"].includes(sortField)) {
+      if (sortField === "precioCosto") {
         aValue = Number(aValue) || 0;
         bValue = Number(bValue) || 0;
-      }
-
-      if (sortField === "margen") {
-        aValue = parseFloat(aValue as string) || 0;
-        bValue = parseFloat(bValue as string) || 0;
       }
 
       const comparison = aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
@@ -212,10 +209,23 @@ function ProductosContent() {
 
   const filterProducts = (products: Product[]) => {
     return products.filter((product) => {
+      const searchableFields = {
+        descripcion: product.descripcion.toLowerCase(),
+        codigo: product.codigo.toLowerCase(),
+        codigoProveedor: product.codigoProveedor.toLowerCase(),
+        codigoBarras: (product.codigoBarras || "").toLowerCase(),
+      };
+
       const matchesSearch =
         !searchTerm ||
-        product.descripcion.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchesSearch;
+        Object.values(searchableFields).some((value) =>
+          value.includes(searchTerm.toLowerCase())
+        );
+
+      const matchesRubro =
+        filterRubro === "all" || product.rubro === filterRubro;
+
+      return matchesSearch && matchesRubro;
     });
   };
 
@@ -243,24 +253,13 @@ function ProductosContent() {
   };
 
   const handleClearFilters = () => {
-    console.log("Antes de limpiar filtros:", {
-      searchTerm,
-      filterUnit,
-      sortField,
-      sortOrder,
-      currentPage,
-    });
-
     setIsClearingFilters(true);
-
     setSearchTerm("");
-    setFilterUnit("all");
+    setFilterRubro("all");
     setSortField("creadoEn");
     setSortOrder("desc");
     setCurrentPage(1);
-
-    const params = new URLSearchParams();
-    router.push(`${pathname}?${params.toString()}`);
+    router.push(pathname || "/");
   };
 
   const sortedAndFiltered = sortProducts(filterProducts(productsList));
@@ -308,17 +307,19 @@ function ProductosContent() {
           </p>
 
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex flex-1 w-full items-center gap-2 flex-wrap">
-              <Input
-                placeholder="Busca por nombre..."
-                className="w-full md:max-w-[600px]"
-                value={searchTerm}
-                onChange={(e) => handleSearch(e.target.value)}
-              />
-
-              <div className="flex items-center gap-2 w-full md:w-auto">
+            <div className="flex md:flex-row flex-col w-full items-center gap-2">
+              <div className="relative flex-grow w-full">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por nombre, código, código de proveedor o código de barras..."
+                  className="pl-8 w-full"
+                  value={searchTerm}
+                  onChange={(e) => handleSearch(e.target.value)}
+                />
+              </div>
+              <div className="flex items-center gap-2 w-full ">
                 {(searchTerm ||
-                  filterUnit !== "all" ||
+                  filterRubro !== "all" ||
                   sortField !== "creadoEn") && (
                   <Button
                     variant="ghost"
@@ -338,8 +339,8 @@ function ProductosContent() {
                 >
                   <Filter className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
                   Filtrar
-                  {filterUnit !== "all" && (
-                    <span className="ml-1 md:ml-2">{filterUnit}</span>
+                  {filterRubro !== "all" && (
+                    <span className="ml-1 md:ml-2">{filterRubro}</span>
                   )}
                 </Button>
 
@@ -355,23 +356,21 @@ function ProductosContent() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => setIsRubroDialogOpen(true)}
-                  className="bg-indigo-gradient"
-                >
-                  <FolderPlus className="h-4 w-4 mr-2" />
-                  Nuevo Rubro
-                </Button>
-                <Button
-                  onClick={() => setIsDialogOpen(true)}
-                  className="bg-indigo-gradient"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Agregar producto
-                </Button>
-              </div>
+            <div className="flex gap-2 justify-start md:justify-end  w-full">
+              <Button
+                onClick={() => setIsRubroDialogOpen(true)}
+                className="bg-indigo-gradient"
+              >
+                <FolderPlus className="h-4 w-4 mr-2" />
+                Rubros
+              </Button>
+              <Button
+                onClick={() => setIsDialogOpen(true)}
+                className="bg-indigo-gradient"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Agregar producto
+              </Button>
             </div>
           </div>
           <div className=" max-w-[100vw]">
@@ -437,10 +436,10 @@ function ProductosContent() {
       <FilterDialog
         isOpen={isFilterDialogOpen}
         onClose={() => setIsFilterDialogOpen(false)}
-        filterUnit={filterUnit}
+        filterRubro={filterRubro}
         onFilterChange={(value) => {
-          setFilterUnit(value);
-          setUrlParam("unit", value === "all" ? null : value);
+          setFilterRubro(value);
+          setUrlParam("rubro", value === "all" ? null : value);
           setCurrentPage(1);
         }}
       />

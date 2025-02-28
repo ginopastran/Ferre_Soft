@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { RecentSalesSkeleton } from "@/components/admin/reporte/RecentSalesSkeleton";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ProductSales {
   id: number;
@@ -12,21 +13,31 @@ interface ProductSales {
 export function RecentSales() {
   const [topProducts, setTopProducts] = useState<ProductSales[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchTopProducts = async () => {
+      if (!user) return;
+
       setLoading(true);
       try {
-        const response = await fetch("/api/ordenes");
-        const ordenes = await response.json();
+        const response = await fetch(
+          `/api/facturas?userId=${user.id}&role=${user.rol.nombre}`
+        );
+        if (!response.ok) {
+          throw new Error("Error al obtener facturas");
+        }
+        const facturas = await response.json();
 
         // Crear un mapa para acumular ventas por producto
         const productSalesMap = new Map<number, ProductSales>();
 
-        // Procesar cada orden y sus detalles
-        ordenes.forEach((orden: any) => {
-          orden.detalles.forEach((detalle: any) => {
+        // Procesar cada factura y sus detalles
+        facturas.forEach((factura: any) => {
+          factura.detalles?.forEach((detalle: any) => {
             const { producto, cantidad, subtotal } = detalle;
+            if (!producto) return;
+
             const productoId = producto.id;
 
             if (productSalesMap.has(productoId)) {
@@ -36,8 +47,8 @@ export function RecentSales() {
             } else {
               productSalesMap.set(productoId, {
                 id: productoId,
-                nombre: producto.nombre,
-                tipoMedida: producto.tipoMedida,
+                nombre: producto.descripcion,
+                tipoMedida: "U",
                 cantidadTotal: cantidad,
                 ventaTotal: subtotal,
               });
@@ -59,7 +70,7 @@ export function RecentSales() {
     };
 
     fetchTopProducts();
-  }, []);
+  }, [user]);
 
   if (loading) return <RecentSalesSkeleton />;
 
@@ -70,8 +81,7 @@ export function RecentSales() {
           <div className="ml-4 space-y-1">
             <p className="text-sm font-medium leading-none">{product.nombre}</p>
             <p className="text-sm text-muted-foreground">
-              {product.cantidadTotal.toFixed(2)}{" "}
-              {product.tipoMedida === "Kg" ? "Kg" : "U"} vendidos
+              {product.cantidadTotal.toFixed(2)} {product.tipoMedida} vendidos
             </p>
           </div>
           <div className="ml-auto font-medium">

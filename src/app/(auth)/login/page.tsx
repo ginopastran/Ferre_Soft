@@ -58,7 +58,7 @@ export default function LoginPage() {
             router.push(
               credentials.user.rol.nombre === "ADMIN"
                 ? "/admin/reporte"
-                : "/cart"
+                : "/admin/ventas"
             );
             return;
           }
@@ -96,7 +96,9 @@ export default function LoginPage() {
 
       updateUser(sessionData.user);
       router.push(
-        sessionData.user.rol.nombre === "ADMIN" ? "/admin/reporte" : "/cart"
+        sessionData.user.rol.nombre === "ADMIN"
+          ? "/admin/reporte"
+          : "/admin/ventas"
       );
     } catch (error) {
       toast.error("Error al iniciar sesión", {

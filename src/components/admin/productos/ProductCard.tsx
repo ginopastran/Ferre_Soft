@@ -1,7 +1,7 @@
 import { Product } from "@/types/product";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Package2, Hash, Barcode, Archive } from "lucide-react";
+import { Package2, Hash, Barcode, Archive, ScanLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils/format";
 
@@ -11,6 +11,8 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, onViewDetails }: ProductCardProps) {
+  console.log("Product in card:", product);
+
   return (
     <Card className="w-full">
       <CardContent className="p-6">
@@ -41,6 +43,12 @@ export function ProductCard({ product, onViewDetails }: ProductCardProps) {
           <div className="flex items-center">
             <Barcode className="h-4 w-4 mr-2 text-muted-foreground" />
             <span>Código Proveedor: {product.codigoProveedor}</span>
+          </div>
+          <div className="flex items-center">
+            <ScanLine className="h-4 w-4 mr-2 text-muted-foreground" />
+            <span>
+              Código de Barras: {product.codigoBarras ?? "No asignado"}
+            </span>
           </div>
           <div className="flex items-center">
             <Archive className="h-4 w-4 mr-2 text-muted-foreground" />

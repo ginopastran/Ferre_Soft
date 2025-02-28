@@ -7,14 +7,33 @@ export default async function handler(
 ) {
   if (req.method === "GET") {
     try {
-      const { userId, role } = req.query;
+      const { userId, role, startDate, endDate } = req.query;
 
       if (!userId || !role) {
         return res.status(400).json({ error: "Usuario no autenticado" });
       }
 
-      const whereClause =
+      const whereClause: any =
         role === "VENDEDOR" ? { vendedorId: Number(userId) } : {};
+
+      // Añadir filtro de fechas si están presentes
+      if (startDate && endDate) {
+        console.log("Fechas recibidas:", { startDate, endDate });
+        const start = new Date(startDate as string);
+        const end = new Date(endDate as string);
+
+        console.log("Fechas parseadas:", {
+          start: start.toISOString(),
+          end: end.toISOString(),
+        });
+
+        whereClause.fecha = {
+          gte: start,
+          lte: end,
+        };
+      }
+
+      console.log("Where clause:", JSON.stringify(whereClause, null, 2));
 
       const facturas = await prisma.factura.findMany({
         where: whereClause,
@@ -39,10 +58,18 @@ export default async function handler(
           },
         },
       });
+
+      console.log(`Facturas encontradas: ${facturas.length}`);
+
       return res.status(200).json(facturas);
     } catch (error) {
       console.error("Error al obtener facturas:", error);
-      return res.status(500).json({ error: "Error al obtener facturas" });
+      return res
+        .status(500)
+        .json({
+          error: "Error al obtener facturas",
+          details: error instanceof Error ? error.message : "Unknown error",
+        });
     }
   }
 

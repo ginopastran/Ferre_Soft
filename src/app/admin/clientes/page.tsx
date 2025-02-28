@@ -24,7 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { toast } from "sonner";
 import {
   Table,
@@ -40,7 +40,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ClientDialog } from "./components/ClientDialog";
 import { formatDNI, formatPhoneNumber } from "@/lib/utils/format";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { ClientsGridSkeleton } from "./components/ClientsGridSkeleton";
 
 interface Sucursal {
@@ -90,7 +90,7 @@ const clients: Client[] = [
   // Puedes agregar más clientes aquí
 ];
 
-export default function SucursalesPage() {
+function ClientesContent() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
   const [nombre, setNombre] = useState("");
@@ -100,11 +100,43 @@ export default function SucursalesPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const [searchTerm, setSearchTerm] = useState(
+    searchParams?.get("search") || ""
+  );
+
+  // Function to set URL parameters
+  const setUrlParam = (name: string, value: string | null) => {
+    const params = new URLSearchParams(searchParams?.toString() || "");
+    if (value) {
+      params.set(name, value);
+    } else {
+      params.delete(name);
+    }
+    router.replace(`${pathname}?${params.toString()}`);
+  };
 
   useEffect(() => {
     fetchSucursales();
     fetchClients();
   }, []);
+
+  useEffect(() => {
+    // Get search from URL when component mounts
+    const searchFromUrl = searchParams?.get("search") || "";
+    setSearchTerm(searchFromUrl);
+  }, [searchParams]);
+
+  // Update filtered clients when search term or clients change
+  useEffect(() => {
+    const results = clients.filter((client) =>
+      Object.values(client).some((value) =>
+        value?.toString().toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    );
+    setFilteredClients(results);
+  }, [searchTerm, clients]);
 
   const fetchSucursales = async () => {
     setLoading(true);
@@ -199,16 +231,6 @@ export default function SucursalesPage() {
       toast.error("Error al actualizar la sucursal");
     }
   };
-  const [searchTerm, setSearchTerm] = useState("");
-
-  useEffect(() => {
-    const results = clients.filter((client) =>
-      Object.values(client).some((value) =>
-        value?.toString().toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
-    setFilteredClients(results);
-  }, [searchTerm, clients]);
 
   const handleAddClient = () => {
     setIsDialogOpen(true);
@@ -216,6 +238,11 @@ export default function SucursalesPage() {
 
   const handleViewDetails = (codigo: string) => {
     router.push(`/admin/clientes/${codigo}`);
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setUrlParam("search", value || null);
   };
 
   const handleCreateClient = async (clientData: Client) => {
@@ -248,94 +275,87 @@ export default function SucursalesPage() {
 
   return (
     <>
-      <SidebarProvider>
-        <AppSidebar activeUrl="/admin/clientes" />
-        <SidebarInset>
-          <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-            <div className="flex items-center gap-2 px-4">
-              <SidebarTrigger className="-ml-1" />
-              <Separator orientation="vertical" className="mr-2 h-4" />
-              <h2 className="text-3xl font-bold tracking-tight text-indigo-gradient">
-                Listado de Clientes
-              </h2>
-            </div>
-          </header>
-          <div className="h-full flex-1 flex-col space-y-2 p-8 flex max-w-[100vw]">
-            <div className="flex gap-4 mb-6 items-center">
-              <div className="relative flex-grow">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Buscar clientes..."
-                  className="pl-8 w-2/3"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <Button
-                onClick={handleAddClient}
-                className="bg-indigo-gradient"
-                size="sm"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Agregar Cliente
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {loading ? (
-                <ClientsGridSkeleton />
-              ) : (
-                filteredClients.map((client) => (
-                  <Card key={client.codigo} className="w-full">
-                    <CardContent className="p-6">
-                      <div className="flex justify-between items-start mb-4">
-                        <h2 className="text-2xl font-semibold text-indigo-gradient">
-                          {client.nombre}
-                        </h2>
-                        <Badge
-                          variant="secondary"
-                          className="bg-indigo-gradient text-white text-sm"
-                        >
-                          {client.codigo}
-                        </Badge>
-                      </div>
-                      <div className="space-y-2 mb-4">
-                        <div className="flex items-center">
-                          <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
-                          <span>{client.direccion}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <CreditCard className="h-4 w-4 mr-2 text-muted-foreground" />
-                          <span>{formatDNI(client.cuitDni)}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                          <span>
-                            {formatPhoneNumber(client.telefono || "")}
-                          </span>
-                        </div>
-                        <div className="flex items-center">
-                          <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
-                          <span>{client.email}</span>
-                        </div>
-                      </div>
-                      <Button
-                        variant="outline"
-                        className="w-full bg-indigo-gradient text-white hover:text-white"
-                        onClick={() => handleViewDetails(client.codigo)}
-                      >
-                        Ver detalles
-                        <ArrowRight className="h-4 w-4 ml-2" />
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </div>
+      <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
+        <div className="flex items-center gap-2 px-4">
+          <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="mr-2 h-4" />
+          <h2 className="text-3xl font-bold tracking-tight text-indigo-gradient">
+            Listado de Clientes
+          </h2>
+        </div>
+      </header>
+      <div className="h-full flex-1 flex-col space-y-2 p-8 flex max-w-[100vw]">
+        <div className="flex gap-4 mb-6 items-center">
+          <div className="relative flex-grow">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Buscar clientes..."
+              className="pl-8 w-full md:w-1/2"
+              value={searchTerm}
+              onChange={(e) => handleSearchChange(e.target.value)}
+            />
           </div>
-        </SidebarInset>
-      </SidebarProvider>
+          <Button
+            onClick={handleAddClient}
+            className="bg-indigo-gradient"
+            size="sm"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Agregar Cliente
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {loading ? (
+            <ClientsGridSkeleton />
+          ) : (
+            filteredClients.map((client) => (
+              <Card key={client.codigo} className="w-full">
+                <CardContent className="p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <h2 className="text-2xl font-semibold text-indigo-gradient">
+                      {client.nombre}
+                    </h2>
+                    <Badge
+                      variant="secondary"
+                      className="bg-indigo-gradient text-white text-sm"
+                    >
+                      {client.codigo}
+                    </Badge>
+                  </div>
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center">
+                      <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <span>{client.direccion}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <CreditCard className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <span>{formatDNI(client.cuitDni)}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <span>{formatPhoneNumber(client.telefono || "")}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <span>{client.email}</span>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full bg-indigo-gradient text-white hover:text-white"
+                    onClick={() => handleViewDetails(client.codigo)}
+                  >
+                    Ver detalles
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      </div>
 
       <ClientDialog
         open={isDialogOpen}
@@ -343,5 +363,18 @@ export default function SucursalesPage() {
         onSubmit={handleCreateClient}
       />
     </>
+  );
+}
+
+export default function ClientesPage() {
+  return (
+    <SidebarProvider>
+      <AppSidebar activeUrl="/admin/clientes" />
+      <SidebarInset>
+        <Suspense fallback={<ClientsGridSkeleton />}>
+          <ClientesContent />
+        </Suspense>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

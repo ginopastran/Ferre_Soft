@@ -18,6 +18,7 @@ import {
   Archive,
   Pencil,
   Hash,
+  ScanLine,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -31,6 +32,7 @@ interface Product {
   id: number;
   codigo: string;
   codigoProveedor: string;
+  codigoBarras: string | null;
   rubro: string;
   descripcion: string;
   proveedor: string;
@@ -98,7 +100,7 @@ export default function ProductPage() {
             <Button
               variant="outline"
               onClick={() => router.back()}
-              className="flex items-center bg-indigo-gradient text-white hover:text-white"
+              className="flex{ABBABA51-AF03-46CF-A253-D1107F7175D8}.png items-center bg-indigo-gradient text-white hover:text-white"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Volver a productos
@@ -176,6 +178,18 @@ export default function ProductPage() {
                         </span>
                         <span className="text-sm text-muted-foreground">
                           Código Proveedor
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center">
+                      <ScanLine className="h-8 w-8 mr-3 text-muted-foreground" />
+                      <div className="flex flex-col gap-0">
+                        <span className="block text-lg">
+                          {product?.codigoBarras || "No asignado"}
+                        </span>
+                        <span className="text-sm text-muted-foreground">
+                          Código de Barras
                         </span>
                       </div>
                     </div>

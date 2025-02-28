@@ -71,6 +71,23 @@ export function FacturaDialog({
     }
   }, [open]);
 
+  useEffect(() => {
+    if (detalles.length > 0) {
+      const nuevosDetalles = detalles.map((detalle) => ({
+        ...detalle,
+        precioUnitario:
+          listaPrecio === "1"
+            ? detalle.producto.precioFinal1
+            : detalle.producto.precioFinal2,
+        subtotal:
+          (listaPrecio === "1"
+            ? detalle.producto.precioFinal1
+            : detalle.producto.precioFinal2) * detalle.cantidad,
+      }));
+      setDetalles(nuevosDetalles);
+    }
+  }, [listaPrecio]);
+
   const fetchClientes = async () => {
     try {
       const response = await fetch("/api/clientes");
@@ -114,7 +131,10 @@ export function FacturaDialog({
     setDetalles(newDetalles);
   };
 
-  const handleCantidadChange = (index: number, cantidad: number) => {
+  const handleCantidadChange = (index: number, value: string) => {
+    const cantidad = value === "" ? 0 : parseInt(value);
+    if (isNaN(cantidad)) return;
+
     const newDetalles = [...detalles];
     newDetalles[index] = {
       ...newDetalles[index],
@@ -282,11 +302,16 @@ export function FacturaDialog({
                     <label className="text-sm font-medium">Cantidad</label>
                     <Input
                       type="number"
-                      min="1"
-                      value={detalle.cantidad}
+                      min="0"
+                      value={detalle.cantidad || ""}
                       onChange={(e) =>
-                        handleCantidadChange(index, Number(e.target.value))
+                        handleCantidadChange(index, e.target.value)
                       }
+                      onBlur={() => {
+                        if (!detalles[index].cantidad) {
+                          handleCantidadChange(index, "1");
+                        }
+                      }}
                     />
                   </div>
 

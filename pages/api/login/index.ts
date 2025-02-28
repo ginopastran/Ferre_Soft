@@ -70,24 +70,28 @@ export default async function handler(
         .setExpirationTime("24h")
         .sign(new TextEncoder().encode(process.env.JWT_SECRET));
 
-      // Modificar cómo se establece la cookie para que funcione con Electron
-      res.setHeader(
-        "Set-Cookie",
-        `token=${jwt}; Path=/; Max-Age=86400; HttpOnly; SameSite=None; Secure`
-      );
+      // Establecer las cookies
+      const userData = {
+        id: user.id,
+        nombre: user.nombre,
+        email: user.email,
+        rol: user.rol,
+      };
+
+      res.setHeader("Set-Cookie", [
+        `token=${jwt}; Path=/; Max-Age=86400; HttpOnly; SameSite=None; Secure`,
+        `userData=${JSON.stringify(
+          userData
+        )}; Path=/; Max-Age=86400; SameSite=None; Secure`,
+      ]);
 
       console.log("Token generado:", jwt);
       console.log("Cookie establecida en el login");
 
       return res.status(200).json({
         message: "Login exitoso",
-        user: {
-          id: user.id,
-          nombre: user.nombre,
-          email: user.email,
-          rol: user.rol,
-        },
-        token: jwt, // Enviar el token en la respuesta también
+        user: userData,
+        token: jwt,
       });
     } catch (error) {
       console.error("Error en login:", error);

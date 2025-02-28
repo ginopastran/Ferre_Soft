@@ -21,6 +21,7 @@ import {
 export interface ProductForm {
   codigo: string;
   codigoProveedor: string;
+  codigoBarras: string;
   rubro: string;
   descripcion: string;
   proveedor: string;
@@ -53,6 +54,7 @@ export function ProductDialog({
   const [formData, setFormData] = useState<ProductForm>(() => ({
     codigo: initialData?.codigo?.toString() || "",
     codigoProveedor: initialData?.codigoProveedor?.toString() || "",
+    codigoBarras: initialData?.codigoBarras?.toString() || "",
     rubro: initialData?.rubro?.toString() || "",
     descripcion: initialData?.descripcion?.toString() || "",
     proveedor: initialData?.proveedor?.toString() || "",
@@ -112,6 +114,7 @@ export function ProductDialog({
       setFormData({
         codigo: initialData.codigo.toString(),
         codigoProveedor: initialData.codigoProveedor.toString(),
+        codigoBarras: initialData.codigoBarras?.toString() || "",
         rubro: initialData.rubro.toString(),
         descripcion: initialData.descripcion.toString(),
         proveedor: initialData.proveedor.toString(),
@@ -167,6 +170,7 @@ export function ProductDialog({
         setFormData({
           codigo: "",
           codigoProveedor: "",
+          codigoBarras: "",
           rubro: "",
           descripcion: "",
           proveedor: "",
@@ -221,6 +225,18 @@ export function ProductDialog({
                   setFormData({ ...formData, codigoProveedor: e.target.value })
                 }
                 disabled={isLoading}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Código de Barras</label>
+              <Input
+                value={formData.codigoBarras}
+                onChange={(e) =>
+                  setFormData({ ...formData, codigoBarras: e.target.value })
+                }
+                disabled={isLoading}
+                placeholder="Escanee o ingrese el código"
               />
             </div>
 

@@ -2,79 +2,82 @@
 
 import { useEffect, useState } from "react";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
-import { OverviewSkeleton } from "@/components/admin/reporte/OverviewSkeleton";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface MonthlyData {
   name: string;
   total: number;
 }
 
-const MONTHS = [
-  "Ene",
-  "Feb",
-  "Mar",
-  "Abr",
-  "May",
-  "Jun",
-  "Jul",
-  "Ago",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dic",
-];
-
 export function Overview() {
-  const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<MonthlyData[]>([]);
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchMonthlyData = async () => {
-      setLoading(true);
+      if (!user) return;
+
       try {
-        const response = await fetch("/api/ordenes");
-        const ordenes = await response.json();
+        const response = await fetch(
+          `/api/facturas?userId=${user.id}&role=${user.rol.nombre}`
+        );
+        if (!response.ok) {
+          throw new Error("Error al obtener datos mensuales");
+        }
+        const facturas = await response.json();
 
-        // Inicializar array con todos los meses en 0
-        const monthlyTotals = MONTHS.map((name) => ({
-          name,
-          total: 0,
-        }));
+        // Procesar las facturas para obtener datos mensuales
+        const monthlyTotals = new Map<string, number>();
+        const months = [
+          "Ene",
+          "Feb",
+          "Mar",
+          "Abr",
+          "May",
+          "Jun",
+          "Jul",
+          "Ago",
+          "Sep",
+          "Oct",
+          "Nov",
+          "Dic",
+        ];
 
-        // Sumar ventas por mes
-        ordenes.forEach((orden: any) => {
-          const date = new Date(orden.fecha);
-          const monthIndex = date.getMonth();
-          monthlyTotals[monthIndex].total += orden.total;
+        // Inicializar todos los meses en 0
+        months.forEach((month, index) => {
+          monthlyTotals.set(month, 0);
         });
 
-        // Redondear totales a 2 decimales
-        monthlyTotals.forEach((month) => {
-          month.total = Number(month.total.toFixed(2));
+        // Sumar las ventas por mes
+        facturas.forEach((factura: any) => {
+          const date = new Date(factura.fecha);
+          const monthName = months[date.getMonth()];
+          monthlyTotals.set(
+            monthName,
+            (monthlyTotals.get(monthName) || 0) + factura.total
+          );
         });
 
-        setMonthlyData(monthlyTotals);
+        // Convertir el mapa a array para el gráfico
+        const chartData = Array.from(monthlyTotals.entries()).map(
+          ([name, total]) => ({
+            name,
+            total,
+          })
+        );
+
+        setData(chartData);
       } catch (error) {
         console.error("Error al obtener datos mensuales:", error);
-      } finally {
-        setLoading(false);
       }
     };
 
     fetchMonthlyData();
-  }, []);
-
-  if (loading) return <OverviewSkeleton />;
+  }, [user]);
 
   return (
     <ResponsiveContainer width="100%" height={350}>
-      <BarChart data={monthlyData}>
-        <defs>
-          <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#059669" />
-            <stop offset="100%" stopColor="#065f46" />
-          </linearGradient>
-        </defs>
+      <BarChart data={data}>
         <XAxis
           dataKey="name"
           stroke="#888888"
@@ -87,14 +90,15 @@ export function Overview() {
           fontSize={12}
           tickLine={false}
           axisLine={false}
-          tickFormatter={(value) => `$${value.toLocaleString()}`}
+          tickFormatter={(value) => `$${value}`}
         />
-        <Bar
-          dataKey="total"
-          fill="url(#barGradient)"
-          radius={[4, 4, 0, 0]}
-          name="Ventas"
-        />
+        <Bar dataKey="total" fill="url(#gradient)" radius={[4, 4, 0, 0]} />
+        <defs>
+          <linearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#4F46E5" />
+            <stop offset="100%" stopColor="#7C3AED" />
+          </linearGradient>
+        </defs>
       </BarChart>
     </ResponsiveContainer>
   );

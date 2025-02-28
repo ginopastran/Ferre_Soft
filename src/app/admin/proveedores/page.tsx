@@ -18,6 +18,7 @@ import {
   Phone,
   ArrowRight,
   DollarSign,
+  Search,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Separator } from "@/components/ui/separator";
@@ -30,6 +31,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatPhoneNumber } from "@/lib/utils/format";
 import { ActualizarPreciosDialog } from "./components/ActualizarPreciosDialog";
+import { ProveedorCardSkeleton } from "@/components/admin/proveedores/ProveedorCardSkeleton";
 
 interface Proveedor {
   id: number;
@@ -125,13 +127,15 @@ function ProveedoresContent() {
           <div className="space-y-4 w-full">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
               <div className="flex flex-1 w-full items-center gap-2 flex-wrap">
-                <Input
-                  placeholder="Buscar por nombre..."
-                  className="w-full md:max-w-[600px]"
-                  value={searchTerm}
-                  onChange={(e) => handleSearch(e.target.value)}
-                />
-
+                <div className="relative flex-grow">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por nombre..."
+                    className="pl-8 w-full md:w-1/2"
+                    value={searchTerm}
+                    onChange={(e) => handleSearch(e.target.value)}
+                  />
+                </div>
                 <div className="flex items-center gap-2 w-full md:w-auto">
                   {searchTerm && (
                     <Button
@@ -144,7 +148,7 @@ function ProveedoresContent() {
                     </Button>
                   )}
 
-                  <Button
+                  {/* <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setIsSortDialogOpen(true)}
@@ -152,7 +156,7 @@ function ProveedoresContent() {
                   >
                     <List className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
                     Ordenar
-                  </Button>
+                  </Button> */}
                 </div>
               </div>
               <div className="flex gap-2">
@@ -173,10 +177,13 @@ function ProveedoresContent() {
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {loading ? (
-                // Aquí podrías agregar un skeleton loader
-                <div>Cargando...</div>
+                <>
+                  {[...Array(6)].map((_, index) => (
+                    <ProveedorCardSkeleton key={index} />
+                  ))}
+                </>
               ) : (
                 filteredProveedores.map((proveedor) => (
                   <Card key={proveedor.id} className="w-full">

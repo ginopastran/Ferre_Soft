@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Legend } from "recharts";
 import { PaymentMethodsChartSkeleton } from "./reporte/PaymentMethodsChartSkeleton";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface PaymentMethodStats {
   name: string;
@@ -21,35 +22,44 @@ const PAYMENT_METHOD_NAMES = {
 export function PaymentMethodsChart() {
   const [paymentStats, setPaymentStats] = useState<PaymentMethodStats[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchPaymentStats = async () => {
+      if (!user) return;
+
       setLoading(true);
       try {
-        const response = await fetch("/api/ordenes");
-        const ordenes = await response.json();
+        const response = await fetch(
+          `/api/facturas?userId=${user.id}&role=${user.rol.nombre}`
+        );
+        if (!response.ok) {
+          throw new Error("Error al obtener facturas");
+        }
+        const facturas = await response.json();
 
         // Crear un mapa para contar los métodos de pago
         const paymentCounts = new Map<string, number>();
 
         // Contar cada método de pago
-        ordenes.forEach((orden: any) => {
-          const method = orden.metodoPago;
+        facturas.forEach((factura: any) => {
+          const method = factura.metodoPago?.toLowerCase() || "efectivo";
           paymentCounts.set(
             method,
-            (paymentCounts.get(method) || 0) + orden.total
+            (paymentCounts.get(method) || 0) + factura.total
           );
         });
 
         // Convertir el mapa a array y formatear para el gráfico
-        const stats = Array.from(paymentCounts.entries()).map(
-          ([method, total]) => ({
-            name: PAYMENT_METHOD_NAMES[
-              method as keyof typeof PAYMENT_METHOD_NAMES
-            ],
+        const stats = Array.from(paymentCounts.entries())
+          .map(([method, total]) => ({
+            name:
+              PAYMENT_METHOD_NAMES[
+                method as keyof typeof PAYMENT_METHOD_NAMES
+              ] || method,
             value: Number(total.toFixed(2)),
-          })
-        );
+          }))
+          .filter((stat) => stat.value > 0); // Solo incluir métodos con valores positivos
 
         setPaymentStats(stats);
       } catch (error) {
@@ -60,9 +70,17 @@ export function PaymentMethodsChart() {
     };
 
     fetchPaymentStats();
-  }, []);
+  }, [user]);
 
   if (loading) return <PaymentMethodsChartSkeleton />;
+
+  if (paymentStats.length === 0) {
+    return (
+      <div className="text-center text-muted-foreground">
+        No hay datos de pagos disponibles
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-[300px]">
