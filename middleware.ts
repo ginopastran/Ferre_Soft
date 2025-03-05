@@ -14,6 +14,8 @@ export async function middleware(req: NextRequest) {
     req.nextUrl.pathname.startsWith("/workbox-") ||
     req.nextUrl.pathname.includes("worker") ||
     req.nextUrl.pathname === "/offline" ||
+    req.nextUrl.pathname === "/catalogo" ||
+    req.nextUrl.pathname === "/api/productos/catalogo" ||
     req.nextUrl.pathname.startsWith("/api/") ||
     req.headers.get("online") === "false"
   ) {
