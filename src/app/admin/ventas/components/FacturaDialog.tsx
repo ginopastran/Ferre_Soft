@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 import { ProductSearchDialog } from "./ProductSearchDialog";
 import { useAuth } from "@/contexts/AuthContext";
+import { formatCurrency } from "@/lib/utils/format";
 
 interface FacturaDialogProps {
   open: boolean;
@@ -36,7 +37,11 @@ interface Producto {
   id: number;
   codigo: string;
   descripcion: string;
+  precioCosto: number;
+  iva: number;
+  margenGanancia1: number;
   precioFinal1: number;
+  margenGanancia2: number;
   precioFinal2: number;
   stock: number;
 }
@@ -59,9 +64,14 @@ export function FacturaDialog({
   const [productos, setProductos] = useState<Producto[]>([]);
   const [clienteId, setClienteId] = useState<string>("");
   const [tipoComprobante, setTipoComprobante] = useState<string>("");
+  const [tipoIvaRemito, setTipoIvaRemito] = useState<"sin_iva" | "iva_10_5">(
+    "sin_iva"
+  );
   const [detalles, setDetalles] = useState<DetalleFactura[]>([]);
   const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
   const [listaPrecio, setListaPrecio] = useState<"1" | "2">("1");
+  const [clienteSeleccionado, setClienteSeleccionado] =
+    useState<Cliente | null>(null);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -73,20 +83,45 @@ export function FacturaDialog({
 
   useEffect(() => {
     if (detalles.length > 0) {
-      const nuevosDetalles = detalles.map((detalle) => ({
-        ...detalle,
-        precioUnitario:
-          listaPrecio === "1"
-            ? detalle.producto.precioFinal1
-            : detalle.producto.precioFinal2,
-        subtotal:
-          (listaPrecio === "1"
-            ? detalle.producto.precioFinal1
-            : detalle.producto.precioFinal2) * detalle.cantidad,
-      }));
+      const nuevosDetalles = detalles.map((detalle) => {
+        let precioFinal;
+
+        if (tipoComprobante === "REMITO") {
+          // Para remitos, primero calculamos el precio base sin IVA usando el precio de costo y el margen
+          const margen =
+            listaPrecio === "1"
+              ? detalle.producto.margenGanancia1
+              : detalle.producto.margenGanancia2;
+
+          // Precio base sin IVA = Precio de costo * (1 + margen/100)
+          const precioBaseSinIva =
+            detalle.producto.precioCosto * (1 + margen / 100);
+
+          if (tipoIvaRemito === "sin_iva") {
+            // Para "Sin IVA", usamos el precio base sin IVA
+            precioFinal = precioBaseSinIva;
+          } else {
+            // Para "Con IVA 10,5%", aplicamos 10.5% de IVA al precio base sin IVA
+            precioFinal = precioBaseSinIva * 1.105;
+          }
+        } else {
+          // Para otros tipos de comprobante, usamos el precio final normal
+          precioFinal =
+            listaPrecio === "1"
+              ? detalle.producto.precioFinal1
+              : detalle.producto.precioFinal2;
+        }
+
+        return {
+          ...detalle,
+          precioUnitario: precioFinal,
+          subtotal: precioFinal * detalle.cantidad,
+        };
+      });
+
       setDetalles(nuevosDetalles);
     }
-  }, [listaPrecio]);
+  }, [listaPrecio, tipoIvaRemito, tipoComprobante]);
 
   const fetchClientes = async () => {
     try {
@@ -190,9 +225,39 @@ export function FacturaDialog({
     }
   };
 
+  const handleTipoComprobanteChange = (value: string) => {
+    setTipoComprobante(value);
+    // Resetear el tipo de IVA si se cambia el tipo de comprobante
+    if (value !== "REMITO") {
+      setTipoIvaRemito("sin_iva");
+    }
+  };
+
   const handleProductSelect = (producto: Producto) => {
-    const precioSeleccionado =
-      listaPrecio === "1" ? producto.precioFinal1 : producto.precioFinal2;
+    let precioFinal;
+
+    if (tipoComprobante === "REMITO") {
+      // Para remitos, primero calculamos el precio base sin IVA usando el precio de costo y el margen
+      const margen =
+        listaPrecio === "1"
+          ? producto.margenGanancia1
+          : producto.margenGanancia2;
+
+      // Precio base sin IVA = Precio de costo * (1 + margen/100)
+      const precioBaseSinIva = producto.precioCosto * (1 + margen / 100);
+
+      if (tipoIvaRemito === "sin_iva") {
+        // Para "Sin IVA", usamos el precio base sin IVA
+        precioFinal = precioBaseSinIva;
+      } else {
+        // Para "Con IVA 10,5%", aplicamos 10.5% de IVA al precio base sin IVA
+        precioFinal = precioBaseSinIva * 1.105;
+      }
+    } else {
+      // Para otros tipos de comprobante, usamos el precio final normal
+      precioFinal =
+        listaPrecio === "1" ? producto.precioFinal1 : producto.precioFinal2;
+    }
 
     setDetalles([
       ...detalles,
@@ -200,10 +265,18 @@ export function FacturaDialog({
         productoId: producto.id,
         producto,
         cantidad: 1,
-        precioUnitario: precioSeleccionado,
-        subtotal: precioSeleccionado,
+        precioUnitario: precioFinal,
+        subtotal: precioFinal,
       },
     ]);
+  };
+
+  const handleClienteChange = (id: string) => {
+    setClienteId(id);
+    const cliente = clientes.find((c) => c.id.toString() === id);
+    setClienteSeleccionado(cliente || null);
+    // Resetear el tipo de comprobante cuando cambia el cliente
+    setTipoComprobante("");
   };
 
   return (
@@ -221,7 +294,7 @@ export function FacturaDialog({
               <label className="text-sm font-medium">Cliente</label>
               <Select
                 value={clienteId}
-                onValueChange={setClienteId}
+                onValueChange={handleClienteChange}
                 disabled={isLoading}
               >
                 <SelectTrigger>
@@ -241,8 +314,8 @@ export function FacturaDialog({
               <label className="text-sm font-medium">Tipo de Comprobante</label>
               <Select
                 value={tipoComprobante}
-                onValueChange={setTipoComprobante}
-                disabled={isLoading}
+                onValueChange={handleTipoComprobanteChange}
+                disabled={isLoading || !clienteId}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccione tipo" />
@@ -250,8 +323,8 @@ export function FacturaDialog({
                 <SelectContent>
                   <SelectItem value="FACTURA_A">Factura A</SelectItem>
                   <SelectItem value="REMITO">Remito</SelectItem>
-                  <SelectItem value="NOTA_CREDITO_A">
-                    Nota de Crédito A
+                  <SelectItem value="NOTA_CREDITO_C">
+                    Nota de Crédito C
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -273,88 +346,140 @@ export function FacturaDialog({
                 </SelectContent>
               </Select>
             </div>
+
+            {tipoComprobante === "REMITO" && (
+              <div className="space-y-2 md:col-span-3">
+                <label className="text-sm font-medium">
+                  Tipo de IVA para Remito
+                </label>
+                <Select
+                  value={tipoIvaRemito}
+                  onValueChange={(value: "sin_iva" | "iva_10_5") =>
+                    setTipoIvaRemito(value)
+                  }
+                  disabled={isLoading}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccione tipo de IVA" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sin_iva">Sin IVA</SelectItem>
+                    <SelectItem value="iva_10_5">Con IVA 10,5%</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <h3 className="text-lg font-medium">Productos</h3>
-              <Button
-                type="button"
-                onClick={handleAddProducto}
-                className="bg-indigo-gradient"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Agregar Producto
-              </Button>
+              <h3 className="text-lg font-semibold">Productos</h3>
+              <div className="flex items-center gap-4">
+                <Button
+                  type="button"
+                  onClick={handleAddProducto}
+                  disabled={isLoading}
+                  className="bg-indigo-gradient"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Agregar Producto
+                </Button>
+              </div>
             </div>
 
-            <div className="space-y-4">
-              {detalles.map((detalle, index) => (
-                <div key={index} className="flex gap-4 items-end">
-                  <div className="flex-1">
-                    <label className="text-sm font-medium">Producto</label>
-                    <div className="p-2 border rounded-md">
-                      {detalle.producto.descripcion} - {detalle.producto.codigo}
-                    </div>
-                  </div>
-
-                  <div className="w-24">
-                    <label className="text-sm font-medium">Cantidad</label>
-                    <Input
-                      type="number"
-                      min="0"
-                      value={detalle.cantidad || ""}
-                      onChange={(e) =>
-                        handleCantidadChange(index, e.target.value)
-                      }
-                      onBlur={() => {
-                        if (!detalles[index].cantidad) {
-                          handleCantidadChange(index, "1");
-                        }
-                      }}
-                    />
-                  </div>
-
-                  <div className="w-32">
-                    <label className="text-sm font-medium">Subtotal</label>
-                    <Input type="number" value={detalle.subtotal} disabled />
-                  </div>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => handleRemoveProducto(index)}
-                    className="bg-cancel-gradient text-white"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
+            <div className="border rounded-md">
+              <table className="w-full">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="text-left p-2">Producto</th>
+                    <th className="text-center p-2">Cantidad</th>
+                    <th className="text-right p-2">Precio</th>
+                    <th className="text-right p-2">Subtotal</th>
+                    <th className="p-2"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {detalles.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="text-center py-4 text-muted-foreground"
+                      >
+                        No hay productos agregados
+                      </td>
+                    </tr>
+                  ) : (
+                    detalles.map((detalle, index) => (
+                      <tr key={index} className="border-t">
+                        <td className="p-2">
+                          {detalle.producto.codigo} -{" "}
+                          {detalle.producto.descripcion}
+                        </td>
+                        <td className="p-2">
+                          <Input
+                            type="number"
+                            min="1"
+                            max={detalle.producto.stock}
+                            value={detalle.cantidad}
+                            onChange={(e) =>
+                              handleCantidadChange(index, e.target.value)
+                            }
+                            className="w-20 mx-auto text-center"
+                            disabled={isLoading}
+                          />
+                        </td>
+                        <td className="p-2 text-right">
+                          {formatCurrency(detalle.precioUnitario)}
+                        </td>
+                        <td className="p-2 text-right">
+                          {formatCurrency(detalle.subtotal)}
+                        </td>
+                        <td className="p-2 text-right">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveProducto(index)}
+                            disabled={isLoading}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t">
+                    <td colSpan={3} className="p-2 text-right font-semibold">
+                      Total:
+                    </td>
+                    <td className="p-2 text-right font-semibold">
+                      {formatCurrency(total)}
+                    </td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
             </div>
           </div>
 
-          <div className="flex justify-between items-center pt-4 border-t">
-            <div className="text-lg font-semibold">
-              Total: ${total.toFixed(2)}
-            </div>
-            <div className="space-x-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={isLoading}
-                className="bg-cancel-gradient text-white hover:text-white"
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="bg-indigo-gradient"
-              >
-                {isLoading ? "Creando..." : "Crear Factura"}
-              </Button>
-            </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isLoading}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              className="bg-indigo-gradient"
+              disabled={isLoading || detalles.length === 0}
+            >
+              {isLoading ? "Guardando..." : "Guardar Factura"}
+            </Button>
           </div>
         </form>
 
@@ -363,6 +488,7 @@ export function FacturaDialog({
           onOpenChange={setIsProductSearchOpen}
           onProductSelect={handleProductSelect}
           listaPrecio={listaPrecio}
+          productosAgregados={detalles.map((detalle) => detalle.productoId)}
         />
       </DialogContent>
     </Dialog>

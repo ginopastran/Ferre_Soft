@@ -27,6 +27,8 @@ import { FacturaTabs } from "../components/FacturaTabs";
 import { FacturaSkeleton } from "../components/FacturaSkeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
+import { AfipInfo } from "@/components/admin/ventas/AfipInfo";
+import { RemitoInfo } from "@/components/admin/ventas/RemitoInfo";
 
 interface DetalleFactura {
   id: number;
@@ -62,6 +64,14 @@ interface Factura {
     metodoPago: string;
     observaciones?: string;
   }>;
+  cae?: string | null;
+  vencimientoCae?: string | null;
+  afipComprobante?: number | null;
+  facturaAnuladaId?: string | null;
+  facturaAnulada?: {
+    id: string;
+    numero: string;
+  } | null;
 }
 
 function FacturaContent({ isAdmin }: { isAdmin: boolean }) {
@@ -92,14 +102,21 @@ function FacturaContent({ isAdmin }: { isAdmin: boolean }) {
   const getBadgeColor = (estado: string) => {
     switch (estado) {
       case "PAGADA":
-        return "bg-gradient-to-r from-green-500 to-green-600";
+        return "bg-gradient-to-r from-green-600 to-green-700";
       case "PENDIENTE":
-        return "bg-gradient-to-r from-yellow-500 to-yellow-600";
+        return "bg-gradient-to-r from-yellow-600 to-yellow-700";
       case "ANULADA":
-        return "bg-gradient-to-r from-red-500 to-red-600";
+        return "bg-gradient-to-r from-red-600 to-red-700";
       default:
         return "bg-gray-500";
     }
+  };
+
+  const getEstadoLabel = (estado: string, tipoComprobante: string) => {
+    if (tipoComprobante.startsWith("NOTA_CREDITO") && estado === "PAGADA") {
+      return "EMITIDA";
+    }
+    return estado;
   };
 
   if (!factura && !loading) return null;
@@ -129,14 +146,16 @@ function FacturaContent({ isAdmin }: { isAdmin: boolean }) {
             <div className="flex justify-between items-start mb-6">
               <div>
                 <h2 className="text-2xl font-semibold text-indigo-gradient">
-                  Factura #{factura.numero}
+                  {factura.tipoComprobante.startsWith("NOTA_CREDITO")
+                    ? `Nota de Crédito #${factura.numero}`
+                    : `Factura #${factura.numero}`}
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   {new Date(factura.fecha).toLocaleDateString()}
                 </p>
               </div>
               <Badge className={getBadgeColor(factura.estado)}>
-                {factura.estado}
+                {getEstadoLabel(factura.estado, factura.tipoComprobante)}
               </Badge>
             </div>
 
@@ -183,31 +202,99 @@ function FacturaContent({ isAdmin }: { isAdmin: boolean }) {
                   <DollarSign className="h-4 w-4 mr-2 text-muted-foreground" />
                   <div className="flex flex-col">
                     <span>Total: {formatCurrency(factura.total)}</span>
-                    <span className="text-sm text-muted-foreground">
-                      Pagado: {formatCurrency(factura.pagado)}
-                    </span>
+                    {!factura.tipoComprobante.startsWith("NOTA_CREDITO") && (
+                      <span className="text-sm text-muted-foreground">
+                        Pagado: {formatCurrency(factura.pagado)}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
 
+            {factura.facturaAnulada && factura.facturaAnulada.numero && (
+              <div className="mb-6 p-4 border border-amber-200 bg-amber-50 rounded-md">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-amber-600" />
+                  <span className="text-amber-800 font-medium">
+                    Esta nota de crédito anula la factura:{" "}
+                    <Button
+                      variant="link"
+                      className="p-0 h-auto text-amber-600 font-medium"
+                      onClick={() => {
+                        if (
+                          factura.facturaAnulada &&
+                          factura.facturaAnulada.numero
+                        ) {
+                          router.push(
+                            `/admin/ventas/${factura.facturaAnulada.numero}`
+                          );
+                        }
+                      }}
+                    >
+                      {factura.facturaAnulada.numero}
+                    </Button>
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Información de AFIP o Remito según el tipo de comprobante */}
+            {(factura.tipoComprobante === "FACTURA_A" ||
+              factura.tipoComprobante === "FACTURA_B") && (
+              <div className="mb-6">
+                <AfipInfo
+                  cae={factura.cae}
+                  vencimientoCae={factura.vencimientoCae}
+                  afipComprobante={factura.afipComprobante}
+                  tipoComprobante={factura.tipoComprobante}
+                  factura={factura}
+                  onUpdate={fetchFactura}
+                />
+              </div>
+            )}
+
+            {/* Información de AFIP para notas de crédito */}
+            {(factura.tipoComprobante === "NOTA_CREDITO_A" ||
+              factura.tipoComprobante === "NOTA_CREDITO_B") && (
+              <div className="mb-6">
+                <AfipInfo
+                  cae={factura.cae}
+                  vencimientoCae={factura.vencimientoCae}
+                  afipComprobante={factura.afipComprobante}
+                  tipoComprobante={factura.tipoComprobante}
+                  factura={factura}
+                  onUpdate={fetchFactura}
+                />
+              </div>
+            )}
+
+            {factura.tipoComprobante === "REMITO" && (
+              <div className="mb-6">
+                <RemitoInfo remito={factura} onUpdate={fetchFactura} />
+              </div>
+            )}
+
             <FacturaTabs
               detalles={factura.detalles || []}
               pagos={factura.pagos || []}
               total={factura.total}
+              tipoComprobante={factura.tipoComprobante}
             />
 
-            {factura.estado !== "PAGADA" && (
-              <div className="mt-6 flex justify-end">
-                <Button
-                  className="bg-indigo-gradient"
-                  onClick={() => setIsPagoDialogOpen(true)}
-                >
-                  Ingresar Pago
-                  <DollarSign className="h-4 w-4 ml-2" />
-                </Button>
-              </div>
-            )}
+            {factura.estado !== "PAGADA" &&
+              factura.estado !== "ANULADA" &&
+              !factura.tipoComprobante.startsWith("NOTA_CREDITO") && (
+                <div className="mt-6 flex justify-end">
+                  <Button
+                    className="bg-indigo-gradient"
+                    onClick={() => setIsPagoDialogOpen(true)}
+                  >
+                    Ingresar Pago
+                    <DollarSign className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
+              )}
           </div>
         ) : null}
 

@@ -27,6 +27,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { ProductDialog, ProductForm } from "../components/ProductDialog";
 import { formatCurrency } from "@/lib/utils/format";
+import Image from "next/image";
 
 interface Product {
   id: number;
@@ -143,10 +144,12 @@ export default function ProductPage() {
                     {product?.imagenUrl && (
                       <div className="flex justify-center">
                         <div className="relative w-40 h-40">
-                          <img
+                          <Image
                             src={product.imagenUrl}
                             alt={product.descripcion}
+                            fill
                             className="object-cover rounded-lg"
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                           />
                         </div>
                       </div>

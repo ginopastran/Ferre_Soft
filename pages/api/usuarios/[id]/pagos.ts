@@ -8,14 +8,32 @@ export default async function handler(
   if (req.method === "POST") {
     try {
       const { id } = req.query;
-      const { monto, metodoPago, observaciones } = req.body;
+      const { monto, metodoPago, observaciones, mesComision, anioComision } =
+        req.body;
 
+      // Validar datos
+      if (!monto || !metodoPago) {
+        return res.status(400).json({
+          error: "Faltan datos requeridos",
+          details: { monto: !monto, metodoPago: !metodoPago },
+        });
+      }
+
+      // Crear el pago con los datos adicionales de comisión si están presentes
       const pago = await prisma.pagoVendedor.create({
         data: {
           vendedorId: Number(id),
           monto: Number(monto),
           metodoPago,
           observaciones,
+          // Agregar datos de comisión si están presentes
+          ...(mesComision && anioComision
+            ? {
+                mesComision,
+                anioComision,
+                esComision: true,
+              }
+            : {}),
         },
       });
 
@@ -23,6 +41,40 @@ export default async function handler(
     } catch (error) {
       console.error("Error al registrar pago:", error);
       return res.status(500).json({ error: "Error al registrar el pago" });
+    }
+  }
+
+  // Endpoint para obtener los pagos de un vendedor
+  if (req.method === "GET") {
+    try {
+      const { id } = req.query;
+      const { mes, anio } = req.query;
+
+      let whereClause: any = {
+        vendedorId: Number(id),
+      };
+
+      // Si se especifican mes y año, filtrar por esos valores
+      if (mes && anio) {
+        whereClause = {
+          ...whereClause,
+          mesComision: parseInt(mes as string),
+          anioComision: parseInt(anio as string),
+          esComision: true,
+        };
+      }
+
+      const pagos = await prisma.pagoVendedor.findMany({
+        where: whereClause,
+        orderBy: {
+          fecha: "desc",
+        },
+      });
+
+      return res.status(200).json(pagos);
+    } catch (error) {
+      console.error("Error al obtener pagos:", error);
+      return res.status(500).json({ error: "Error al obtener los pagos" });
     }
   }
 

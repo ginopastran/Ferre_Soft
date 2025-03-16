@@ -8,6 +8,7 @@ import { Search, FileDown, Package2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils/format";
 import { CatalogoCard } from "@/components/catalogo/CatalogoCard";
+import { PublicHeader } from "@/components/catalogo/PublicHeader";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
 
@@ -84,7 +85,9 @@ export default function CatalogoPage() {
 
       // Agregar encabezado
       pdf.setTextColor(0, 0, 0);
-      pdf.text("LISTA DE PRECIOS", pageWidth / 2, margin, { align: "center" });
+      pdf.text("LISTA DE PRECIOS (SIN IVA)", pageWidth / 2, margin, {
+        align: "center",
+      });
       pdf.setFontSize(12);
       const fecha = new Date().toLocaleDateString();
       pdf.text(fecha, pageWidth - margin, margin, { align: "right" });
@@ -193,22 +196,23 @@ export default function CatalogoPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold text-indigo-gradient">
-              Catálogo de Productos
+      <PublicHeader />
+
+      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div className="px-4 py-6 sm:px-0">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-3xl font-bold text-indigo-600">
+              Catálogo de Productos (Precios sin IVA)
             </h1>
-            <Button onClick={handleDownloadPDF} className="bg-indigo-gradient">
+            <Button
+              onClick={handleDownloadPDF}
+              className="bg-indigo-600 hover:bg-indigo-700"
+            >
               <FileDown className="h-4 w-4 mr-2" />
               Descargar PDF
             </Button>
           </div>
-        </div>
-      </header>
 
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
           <div className="mb-6">
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -248,7 +252,13 @@ export default function CatalogoPage() {
               ))
             ) : (
               <div className="col-span-full text-center text-muted-foreground">
-                No se encontraron productos
+                <Package2 className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-semibold">
+                  No se encontraron productos
+                </h3>
+                <p className="mt-1 text-sm">
+                  Intenta con otra búsqueda o revisa más tarde.
+                </p>
               </div>
             )}
           </div>

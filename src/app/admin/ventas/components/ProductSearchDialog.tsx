@@ -14,7 +14,11 @@ interface Producto {
   id: number;
   codigo: string;
   descripcion: string;
+  precioCosto: number;
+  iva: number;
+  margenGanancia1: number;
   precioFinal1: number;
+  margenGanancia2: number;
   precioFinal2: number;
   stock: number;
 }
@@ -24,6 +28,7 @@ interface ProductSearchDialogProps {
   onOpenChange: (open: boolean) => void;
   onProductSelect: (producto: Producto) => void;
   listaPrecio: "1" | "2";
+  productosAgregados?: number[]; // IDs de productos ya agregados a la factura
 }
 
 export function ProductSearchDialog({
@@ -31,6 +36,7 @@ export function ProductSearchDialog({
   onOpenChange,
   onProductSelect,
   listaPrecio,
+  productosAgregados = [], // Valor por defecto: array vacío
 }: ProductSearchDialogProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -45,18 +51,33 @@ export function ProductSearchDialog({
   useEffect(() => {
     const filtered = productos.filter(
       (producto) =>
-        producto.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        producto.descripcion.toLowerCase().includes(searchTerm.toLowerCase())
+        // Filtrar por término de búsqueda
+        (producto.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          producto.descripcion
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase())) &&
+        // Solo mostrar productos con stock disponible
+        producto.stock > 0 &&
+        // Excluir productos ya agregados a la factura
+        !productosAgregados.includes(producto.id)
     );
     setFilteredProductos(filtered);
-  }, [searchTerm, productos]);
+  }, [searchTerm, productos, productosAgregados]);
 
   const fetchProductos = async () => {
     try {
       const response = await fetch("/api/productos");
       const data = await response.json();
-      setProductos(data);
-      setFilteredProductos(data);
+      // Filtrar productos con stock > 0
+      const productosConStock = data.filter(
+        (producto: Producto) => producto.stock > 0
+      );
+      setProductos(productosConStock);
+      setFilteredProductos(
+        productosConStock.filter(
+          (producto: Producto) => !productosAgregados.includes(producto.id)
+        )
+      );
     } catch (error) {
       console.error("Error al cargar productos:", error);
     }
@@ -99,33 +120,44 @@ export function ProductSearchDialog({
               </tr>
             </thead>
             <tbody>
-              {filteredProductos.map((producto) => (
-                <tr
-                  key={producto.id}
-                  className="border-b hover:bg-muted/50 transition-colors"
-                >
-                  <td className="py-2">{producto.codigo}</td>
-                  <td className="py-2">{producto.descripcion}</td>
-                  <td className="py-2 text-right">
-                    {formatCurrency(
-                      listaPrecio === "1"
-                        ? producto.precioFinal1
-                        : producto.precioFinal2
-                    )}
-                  </td>
-                  <td className="py-2 text-right">{producto.stock}</td>
-                  <td className="py-2 text-right">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleProductSelect(producto)}
-                      className="bg-indigo-gradient text-white hover:text-white"
-                    >
-                      Seleccionar
-                    </Button>
+              {filteredProductos.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="py-4 text-center text-muted-foreground"
+                  >
+                    No se encontraron productos disponibles
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredProductos.map((producto) => (
+                  <tr
+                    key={producto.id}
+                    className="border-b hover:bg-muted/50 transition-colors"
+                  >
+                    <td className="py-2">{producto.codigo}</td>
+                    <td className="py-2">{producto.descripcion}</td>
+                    <td className="py-2 text-right">
+                      {formatCurrency(
+                        listaPrecio === "1"
+                          ? producto.precioFinal1
+                          : producto.precioFinal2
+                      )}
+                    </td>
+                    <td className="py-2 text-right">{producto.stock}</td>
+                    <td className="py-2 text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleProductSelect(producto)}
+                        className="bg-indigo-gradient text-white hover:text-white"
+                      >
+                        Seleccionar
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

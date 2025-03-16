@@ -34,6 +34,7 @@ import {
   Phone,
   Search,
   X,
+  Calendar,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/format";
 import { VendedorDialog } from "./components/VendedorDialog";
@@ -41,6 +42,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Building2 } from "lucide-react";
 import { PagoVendedorDialog } from "./components/PagoVendedorDialog";
+import { ComisionMensualDialog } from "./components/ComisionMensualDialog";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Suspense } from "react";
@@ -68,6 +70,11 @@ interface Sucursal {
 
 function VendedoresContent() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isPagoDialogOpen, setIsPagoDialogOpen] = useState(false);
+  const [isComisionDialogOpen, setIsComisionDialogOpen] = useState(false);
+  const [selectedVendedor, setSelectedVendedor] = useState<Vendedor | null>(
+    null
+  );
   const [loading, setLoading] = useState(true);
   const [vendedores, setVendedores] = useState<Vendedor[]>([]);
   const [filteredVendedores, setFilteredVendedores] = useState<Vendedor[]>([]);
@@ -373,10 +380,20 @@ function VendedoresContent() {
                         onClick={() => {
                           router.push(`/admin/vendedores/${vendedor.id}`);
                         }}
-                        className="bg-indigo-gradient"
+                        className="bg-indigo-gradient mr-2"
                       >
                         <DollarSign className="h-4 w-4 mr-2" />
                         Ver Detalles
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          setSelectedVendedor(vendedor);
+                          setIsComisionDialogOpen(true);
+                        }}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <Calendar className="h-4 w-4 mr-2" />
+                        Comisión Mensual
                       </Button>
                     </div>
                   </div>
@@ -397,6 +414,16 @@ function VendedoresContent() {
         onSubmit={handleCreateVendedor}
         sucursales={sucursales}
       />
+      {selectedVendedor && (
+        <ComisionMensualDialog
+          open={isComisionDialogOpen}
+          onOpenChange={setIsComisionDialogOpen}
+          vendedorId={selectedVendedor.id}
+          nombreVendedor={selectedVendedor.nombre}
+          comisionPorcentaje={selectedVendedor.comision}
+          onPagoComplete={fetchVendedores}
+        />
+      )}
     </>
   );
 }

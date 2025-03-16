@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { Package2, Hash, Tag, DollarSign, Percent } from "lucide-react";
+import { Package2, Hash, Tag, DollarSign } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/format";
 
 interface Producto {
@@ -17,6 +17,9 @@ interface CatalogoCardProps {
 }
 
 export function CatalogoCard({ producto }: CatalogoCardProps) {
+  // Calcular el precio sin IVA
+  const precioSinIva = producto.precioFinal1 / (1 + producto.iva / 100);
+
   return (
     <Card className="w-full">
       <CardContent className="p-6">
@@ -55,16 +58,10 @@ export function CatalogoCard({ producto }: CatalogoCardProps) {
             </div>
 
             <div className="flex items-center text-sm">
-              <Percent className="h-4 w-4 mr-2 text-muted-foreground" />
-              <span className="text-muted-foreground">IVA:</span>
-              <span className="ml-2">{producto.iva}%</span>
-            </div>
-
-            <div className="flex items-center text-sm">
               <DollarSign className="h-4 w-4 mr-2 text-muted-foreground" />
-              <span className="text-muted-foreground">Precio:</span>
+              <span className="text-muted-foreground">Precio sin IVA:</span>
               <span className="ml-2 font-semibold">
-                {formatCurrency(producto.precioFinal1)}
+                {formatCurrency(precioSinIva)}
               </span>
             </div>
           </div>

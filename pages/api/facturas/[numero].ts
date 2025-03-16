@@ -24,6 +24,12 @@ export default async function handler(
             },
           },
           pagos: true,
+          facturaAnulada: {
+            select: {
+              id: true,
+              numero: true,
+            },
+          },
         },
       });
 

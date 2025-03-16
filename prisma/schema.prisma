@@ -213,21 +213,30 @@ model Proveedor {
 
 // Modificar el modelo existente de OrdenCompra para convertirlo en Factura
 model Factura {
-  id              String           @id @default(cuid())
-  numero          String           @unique
-  fecha           DateTime         @default(now())
-  vendedorId      Int
-  clienteId       Int
-  tipoComprobante String // "FACTURA_A", "REMITO", "NOTA_CREDITO_A"
-  total           Float
-  pagado          Float            @default(0)
-  estado          String // "PENDIENTE", "PAGADA", "ANULADA"
-  detalles        DetalleFactura[]
-  vendedor        Usuario          @relation(fields: [vendedorId], references: [id])
-  cliente         Cliente          @relation(fields: [clienteId], references: [id])
-  creadoEn        DateTime         @default(now())
-  actualizadoEn   DateTime         @updatedAt
-  pagos           PagoFactura[]
+  id               String   @id @default(uuid())
+  numero           String   @unique
+  fecha            DateTime
+  tipoComprobante  String
+  total            Float
+  pagado           Float    @default(0)
+  estado           String   @default("PENDIENTE")
+  cae              String?
+  vencimientoCae   String?
+  afipComprobante  Int?
+  clienteId        Int
+  vendedorId       Int?
+  facturaAnuladaId String? // ID de la factura que esta nota de crédito anula
+
+  cliente        Cliente          @relation(fields: [clienteId], references: [id])
+  vendedor       Usuario?         @relation(fields: [vendedorId], references: [id])
+  facturaAnulada Factura?         @relation("FacturaAnulacion", fields: [facturaAnuladaId], references: [id])
+  notasCredito   Factura[]        @relation("FacturaAnulacion")
+  detalles       DetalleFactura[]
+  pagos          PagoFactura[]
+
+  @@index([clienteId])
+  @@index([vendedorId])
+  @@index([facturaAnuladaId])
 }
 
 model DetalleFactura {
@@ -261,6 +270,9 @@ model PagoVendedor {
   monto         Float
   metodoPago    String
   observaciones String?
+  esComision    Boolean  @default(false)
+  mesComision   Int?
+  anioComision  Int?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }

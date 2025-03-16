@@ -31,6 +31,9 @@ const nextConfig = withPWA(config)({
   eslint: {
     ignoreDuringBuilds: true,
   },
+  images: {
+    domains: ["res.cloudinary.com"],
+  },
   headers: async () => [
     {
       source: "/manifest.json",

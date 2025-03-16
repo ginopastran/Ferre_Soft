@@ -1,0 +1,114 @@
+/* Estilos para la factura */
+.wrapper {
+  border: 1px solid #000;
+  padding: 10px;
+  margin-bottom: 2px;
+  box-sizing: border-box;
+}
+
+.flex {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.space-between {
+  justify-content: space-between;
+}
+
+.space-around {
+  justify-content: space-around;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-left {
+  text-align: left;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.bold {
+  font-weight: bold;
+}
+
+.italic {
+  font-style: italic;
+}
+
+.text-20 {
+  font-size: 20px;
+}
+
+.no-margin {
+  margin: 0;
+}
+
+.inline-block {
+  display: inline-block;
+  vertical-align: top;
+}
+
+.w50 {
+  width: 50%;
+}
+
+.relative {
+  position: relative;
+}
+
+.floating-mid {
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  border: 1px solid #000;
+  padding: 5px 15px;
+  z-index: 10;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+table,
+th,
+td {
+  border: 1px solid #000;
+}
+
+th,
+td {
+  padding: 5px;
+}
+
+.small {
+  font-size: 10px;
+}
+
+.footer {
+  page-break-inside: avoid;
+}
+
+/* Estilos para impresión */
+@media print {
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+  }
+
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 10mm;
+    margin: 0 auto;
+    background: white;
+  }
+}

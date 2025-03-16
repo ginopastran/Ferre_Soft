@@ -23,14 +23,24 @@ interface FacturaTabsProps {
   }>;
   pagos: PagoRegistro[];
   total: number;
+  tipoComprobante?: string;
 }
 
-export function FacturaTabs({ detalles, pagos = [], total }: FacturaTabsProps) {
+export function FacturaTabs({
+  detalles,
+  pagos = [],
+  total,
+  tipoComprobante,
+}: FacturaTabsProps) {
+  const esNotaCredito = tipoComprobante?.startsWith("NOTA_CREDITO");
+
   return (
     <Tabs defaultValue="detalle" className="w-full">
       <TabsList>
         <TabsTrigger value="detalle">Detalle de productos</TabsTrigger>
-        <TabsTrigger value="pagos">Registro de pagos</TabsTrigger>
+        {!esNotaCredito && (
+          <TabsTrigger value="pagos">Registro de pagos</TabsTrigger>
+        )}
       </TabsList>
 
       <TabsContent value="detalle">
@@ -84,42 +94,44 @@ export function FacturaTabs({ detalles, pagos = [], total }: FacturaTabsProps) {
         </div>
       </TabsContent>
 
-      <TabsContent value="pagos">
-        <div className="rounded-lg border overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-muted/50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Fecha
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Método de pago
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                  Monto
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Observaciones
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {pagos.map((pago) => (
-                <tr key={pago.id}>
-                  <td className="px-6 py-4">
-                    {new Date(pago.fecha).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4">{pago.metodoPago}</td>
-                  <td className="px-6 py-4 text-right">
-                    {formatCurrency(pago.monto)}
-                  </td>
-                  <td className="px-6 py-4">{pago.observaciones || "-"}</td>
+      {!esNotaCredito && (
+        <TabsContent value="pagos">
+          <div className="rounded-lg border overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Fecha
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Método de pago
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                    Monto
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Observaciones
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </TabsContent>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {pagos.map((pago) => (
+                  <tr key={pago.id}>
+                    <td className="px-6 py-4">
+                      {new Date(pago.fecha).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4">{pago.metodoPago}</td>
+                    <td className="px-6 py-4 text-right">
+                      {formatCurrency(pago.monto)}
+                    </td>
+                    <td className="px-6 py-4">{pago.observaciones || "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </TabsContent>
+      )}
     </Tabs>
   );
 }
