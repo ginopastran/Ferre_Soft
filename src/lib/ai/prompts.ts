@@ -130,7 +130,9 @@ export async function getSystemPrompt() {
     ventasPorCliente.set(factura.cliente.nombre, clienteActual);
 
     // Ventas por vendedor
-    const vendedorActual = ventasPorVendedor.get(factura.vendedor.nombre) || {
+    const vendedorActual = ventasPorVendedor.get(
+      factura?.vendedor?.nombre || ""
+    ) || {
       ventas: 0,
       cantidad: 0,
       facturas: 0,
@@ -140,8 +142,8 @@ export async function getSystemPrompt() {
     vendedorActual.cantidad += cantidadProductos;
     vendedorActual.facturas += 1;
     vendedorActual.comision +=
-      factura.total * (factura.vendedor.comision / 100);
-    ventasPorVendedor.set(factura.vendedor.nombre, vendedorActual);
+      factura.total * (factura?.vendedor?.comision || 0 / 100);
+    ventasPorVendedor.set(factura?.vendedor?.nombre || "", vendedorActual);
 
     // Métodos de pago por día
     const metodoPagoDia = metodoPagoPorDia.get(diaSemana) || new Map();
