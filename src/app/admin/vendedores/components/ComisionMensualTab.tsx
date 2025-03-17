@@ -1,9 +1,3 @@
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -24,11 +18,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Calendar, DollarSign, Loader2, AlertCircle } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-interface ComisionMensualDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+interface ComisionMensualTabProps {
   vendedorId: number;
   nombreVendedor: string;
   comisionPorcentaje: number;
@@ -59,14 +52,12 @@ interface PagoComision {
   anioComision: number;
 }
 
-export function ComisionMensualDialog({
-  open,
-  onOpenChange,
+export function ComisionMensualTab({
   vendedorId,
   nombreVendedor,
   comisionPorcentaje,
   onPagoComplete,
-}: ComisionMensualDialogProps) {
+}: ComisionMensualTabProps) {
   const [mes, setMes] = useState<string>("");
   const [anio, setAnio] = useState<string>(new Date().getFullYear().toString());
   const [facturas, setFacturas] = useState<Factura[]>([]);
@@ -198,11 +189,6 @@ export function ComisionMensualDialog({
 
       // Notificar al componente padre
       onPagoComplete?.();
-
-      // Solo cerrar el diálogo si todo fue exitoso
-      if (montoPendiente <= 0) {
-        onOpenChange(false);
-      }
     } catch (error) {
       toast.error("Error al registrar el pago de comisión");
     } finally {
@@ -215,14 +201,8 @@ export function ComisionMensualDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-indigo-gradient">
-            Comisiones Mensuales - {nombreVendedor}
-          </DialogTitle>
-        </DialogHeader>
-
+    <Card>
+      <CardContent className="pt-6">
         <div className="space-y-6">
           <div className="flex items-center gap-4">
             <div className="space-y-2 flex-1">
@@ -356,6 +336,31 @@ export function ComisionMensualDialog({
                   </div>
                 </div>
               </div>
+
+              <div className="flex justify-end">
+                <Button
+                  onClick={handlePagarComision}
+                  disabled={processingPago || montoPendiente <= 0}
+                  className="bg-indigo-gradient"
+                >
+                  {processingPago ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Procesando...
+                    </>
+                  ) : montoPendiente <= 0 ? (
+                    <>
+                      <DollarSign className="mr-2 h-4 w-4" />
+                      Comisión Pagada
+                    </>
+                  ) : (
+                    <>
+                      <DollarSign className="mr-2 h-4 w-4" />
+                      Pagar {formatCurrency(montoPendiente)}
+                    </>
+                  )}
+                </Button>
+              </div>
             </>
           ) : mes && anio ? (
             <div className="text-center py-8 text-muted-foreground">
@@ -366,42 +371,8 @@ export function ComisionMensualDialog({
               Seleccione un mes y año para ver las comisiones
             </div>
           )}
-
-          <div className="flex justify-end space-x-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={processingPago}
-              className="bg-cancel-gradient text-white hover:text-white"
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={handlePagarComision}
-              disabled={processingPago || montoPendiente <= 0}
-              className="bg-indigo-gradient"
-            >
-              {processingPago ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Procesando...
-                </>
-              ) : montoPendiente <= 0 ? (
-                <>
-                  <DollarSign className="mr-2 h-4 w-4" />
-                  Comisión Pagada
-                </>
-              ) : (
-                <>
-                  <DollarSign className="mr-2 h-4 w-4" />
-                  Pagar {formatCurrency(montoPendiente)}
-                </>
-              )}
-            </Button>
-          </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </CardContent>
+    </Card>
   );
 }
