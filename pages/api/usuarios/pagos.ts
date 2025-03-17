@@ -5,19 +5,23 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const { userId } = req.query;
-
-  if (!userId || Array.isArray(userId) || isNaN(Number(userId))) {
-    return res.status(400).json({ error: "ID de usuario inválido" });
-  }
-
-  const id = Number(userId);
-
   // POST - Crear un nuevo pago
   if (req.method === "POST") {
     try {
-      const { monto, metodoPago, observaciones, mesComision, anioComision } =
-        req.body;
+      const {
+        userId,
+        monto,
+        metodoPago,
+        observaciones,
+        mesComision,
+        anioComision,
+      } = req.body;
+
+      if (!userId || isNaN(Number(userId))) {
+        return res.status(400).json({ error: "ID de usuario inválido" });
+      }
+
+      const id = Number(userId);
 
       // Validar datos
       if (!monto || !metodoPago) {
@@ -55,7 +59,13 @@ export default async function handler(
   // GET - Obtener pagos de un vendedor
   if (req.method === "GET") {
     try {
-      const { mes, anio } = req.query;
+      const { userId, mes, anio } = req.query;
+
+      if (!userId || Array.isArray(userId) || isNaN(Number(userId))) {
+        return res.status(400).json({ error: "ID de usuario inválido" });
+      }
+
+      const id = Number(userId);
 
       let whereClause: any = {
         vendedorId: id,

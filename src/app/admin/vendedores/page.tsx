@@ -383,7 +383,7 @@ function VendedoresContent() {
                         </p>
                       </div>
                     </div>
-                    <div className="mt-2">
+                    <div className="mt-2 flex flex-col">
                       <label className="text-sm text-muted-foreground">
                         A Pagar
                       </label>
@@ -394,12 +394,12 @@ function VendedoresContent() {
                         Total pagado: {formatCurrency(vendedor.totalPagado)}
                       </p>
                     </div>
-                    <div className="mt-4 flex justify-end">
+                    <div className="mt-4 flex justify-end lg:flex-row flex-col gap-3 lg:gap-0">
                       <Button
                         onClick={() => {
                           router.push(`/admin/vendedores/${vendedor.id}`);
                         }}
-                        className="bg-indigo-gradient mr-2"
+                        className="bg-indigo-gradient mr-2 w-full"
                       >
                         <DollarSign className="h-4 w-4 mr-2" />
                         Ver Detalles
@@ -409,7 +409,7 @@ function VendedoresContent() {
                           setSelectedVendedor(vendedor);
                           setIsComisionDialogOpen(true);
                         }}
-                        className="bg-green-600 hover:bg-green-700"
+                        className="bg-green-600 hover:bg-green-700 w-full"
                       >
                         <Calendar className="h-4 w-4 mr-2" />
                         Comisión Mensual

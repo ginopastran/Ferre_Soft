@@ -164,12 +164,13 @@ export function ComisionMensualTab({
 
     setProcessingPago(true);
     try {
-      const response = await fetch(`/api/usuarios/pagos?userId=${vendedorId}`, {
+      const response = await fetch(`/api/usuarios/pagos`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          userId: vendedorId,
           monto: montoPendiente,
           metodoPago: "TRANSFERENCIA",
           observaciones: `Comisión del ${

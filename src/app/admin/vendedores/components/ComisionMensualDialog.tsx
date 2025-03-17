@@ -108,7 +108,7 @@ export function ComisionMensualDialog({
     setLoading(true);
     try {
       const response = await fetch(
-        `/api/usuarios/${vendedorId}/comisiones?mes=${mes}&anio=${anio}`
+        `/api/usuarios/comisiones?userId=${vendedorId}&mes=${mes}&anio=${anio}`
       );
 
       if (!response.ok) {
@@ -135,7 +135,7 @@ export function ComisionMensualDialog({
   const fetchPagosExistentes = async () => {
     try {
       const response = await fetch(
-        `/api/usuarios/${vendedorId}/pagos?mes=${mes}&anio=${anio}`
+        `/api/usuarios/pagos?userId=${vendedorId}&mes=${mes}&anio=${anio}`
       );
 
       if (!response.ok) {
@@ -173,12 +173,13 @@ export function ComisionMensualDialog({
 
     setProcessingPago(true);
     try {
-      const response = await fetch(`/api/usuarios/${vendedorId}/pagos`, {
+      const response = await fetch(`/api/usuarios/pagos`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          userId: vendedorId,
           monto: montoPendiente,
           metodoPago: "TRANSFERENCIA",
           observaciones: `Comisión del ${

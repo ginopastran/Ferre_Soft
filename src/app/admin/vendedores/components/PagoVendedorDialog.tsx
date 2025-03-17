@@ -57,12 +57,13 @@ export function PagoVendedorDialog({
 
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/usuarios/${vendedorId}/pagos`, {
+      const response = await fetch(`/api/usuarios/pagos`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          userId: vendedorId,
           monto: montoNumerico,
           metodoPago,
           observaciones,
