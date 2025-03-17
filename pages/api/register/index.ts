@@ -21,24 +21,30 @@ export default async function handler(
 
       if (isFirstUser) {
         // Crear roles y sucursal para el primer usuario
-        const [roleAdmin, roleVendedor, sucursal] = await prisma.$transaction([
-          prisma.rol.upsert({
-            where: { nombre: "ADMIN" },
-            update: {},
-            create: { nombre: "ADMIN" },
-          }),
-          prisma.rol.upsert({
-            where: { nombre: "VENDEDOR" },
-            update: {},
-            create: { nombre: "VENDEDOR" },
-          }),
-          prisma.sucursal.create({
-            data: {
-              nombre: "Sucursal Principal",
-              ubicacion: "Dirección Principal",
-            },
-          }),
-        ]);
+        const [roleAdmin, roleVendedor, roleSuperAdmin, sucursal] =
+          await prisma.$transaction([
+            prisma.rol.upsert({
+              where: { nombre: "ADMIN" },
+              update: {},
+              create: { nombre: "ADMIN" },
+            }),
+            prisma.rol.upsert({
+              where: { nombre: "VENDEDOR" },
+              update: {},
+              create: { nombre: "VENDEDOR" },
+            }),
+            prisma.rol.upsert({
+              where: { nombre: "SUPERADMIN" },
+              update: {},
+              create: { nombre: "SUPERADMIN" },
+            }),
+            prisma.sucursal.create({
+              data: {
+                nombre: "Sucursal Principal",
+                ubicacion: "Dirección Principal",
+              },
+            }),
+          ]);
 
         // Crear primer usuario como ADMIN
         const hashedPassword = await bcrypt.hash(password, 10);

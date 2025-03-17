@@ -18,6 +18,8 @@ import {
   SquareTerminal,
   Users,
   Receipt,
+  User,
+  Shield,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMemo } from "react";
@@ -99,6 +101,8 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 export function AppSidebar({ activeUrl, ...props }: AppSidebarProps) {
   const { user } = useAuth();
   const isVendedor = user?.rol?.nombre === "VENDEDOR";
+  const isSuperAdmin = user?.rol?.nombre === "SUPERADMIN";
+  const isAdmin = user?.rol?.nombre === "ADMIN";
 
   const navItems = useMemo(() => {
     if (isVendedor) {
@@ -112,8 +116,8 @@ export function AppSidebar({ activeUrl, ...props }: AppSidebarProps) {
       ];
     }
 
-    // Mostrar todas las opciones para administradores
-    return [
+    // Opciones comunes para administradores
+    const adminItems = [
       {
         title: "Reporte",
         url: "/admin/reporte",
@@ -144,13 +148,25 @@ export function AppSidebar({ activeUrl, ...props }: AppSidebarProps) {
         url: "/admin/vendedores",
         icon: Users,
       },
-      {
-        title: "Configuración",
-        url: "/admin/configuracion/afip",
-        icon: Settings2,
-      },
     ];
-  }, [isVendedor]);
+
+    // SUPERADMIN solo puede ver la configuración de AFIP y asignar SUPERADMIN
+    if (isSuperAdmin) {
+      adminItems.push({
+        title: "Config. AFIP",
+        url: "/admin/configuracion/afip",
+        icon: Shield,
+      });
+
+      adminItems.push({
+        title: "Asignar SUPERADMIN",
+        url: "/admin/configuracion/asignar-superadmin",
+        icon: User,
+      });
+    }
+
+    return adminItems;
+  }, [isVendedor, isSuperAdmin, isAdmin]);
 
   return (
     <Sidebar collapsible="icon" {...props}>

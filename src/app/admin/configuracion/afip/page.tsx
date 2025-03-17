@@ -39,7 +39,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Loader2, Plus, RefreshCw, Upload } from "lucide-react";
+import { Loader2, Plus, RefreshCw, Shield, Upload } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
 
 interface Certificate {
   id: number;
@@ -53,6 +55,36 @@ interface Certificate {
 }
 
 export default function AfipConfigPage() {
+  const { user } = useAuth();
+  const router = useRouter();
+
+  // Verificar si el usuario es SUPERADMIN
+  useEffect(() => {
+    if (user && user.rol && user.rol.nombre !== "SUPERADMIN") {
+      toast.error("No tienes permisos para acceder a esta página");
+      router.push("/admin/reporte");
+    }
+  }, [user, router]);
+
+  // Si no hay usuario o no es SUPERADMIN, no renderizar el contenido
+  if (!user || (user.rol && user.rol.nombre !== "SUPERADMIN")) {
+    return (
+      <SidebarProvider>
+        <AppSidebar activeUrl="/admin/configuracion" />
+        <SidebarInset>
+          <div className="flex flex-col items-center justify-center h-full">
+            <Shield className="h-16 w-16 text-muted-foreground mb-4" />
+            <h2 className="text-xl font-semibold mb-2">Acceso Restringido</h2>
+            <p className="text-muted-foreground text-center max-w-md">
+              Esta sección está reservada para super administradores. Si
+              necesitas acceso, contacta al desarrollador del sistema.
+            </p>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    );
+  }
+
   return (
     <SidebarProvider>
       <AppSidebar activeUrl="/admin/configuracion" />

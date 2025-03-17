@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "@/lib/prisma";
 import fs from "fs";
 import path from "path";
+import { verify } from "jsonwebtoken";
 
 // Helper para leer un archivo como texto
 const readFileAsText = (filePath: string): string => {
@@ -13,10 +14,40 @@ const readFileAsText = (filePath: string): string => {
   }
 };
 
+// Middleware para verificar si el usuario es SUPERADMIN
+const verifySuperAdmin = async (req: NextApiRequest): Promise<boolean> => {
+  try {
+    // Obtener token de las cookies
+    const token = req.cookies.token;
+    if (!token) return false;
+
+    // Verificar token
+    const decoded: any = verify(token, process.env.JWT_SECRET || "");
+    if (!decoded || !decoded.userId) return false;
+
+    // Buscar usuario y verificar rol
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: decoded.userId },
+      include: { rol: true },
+    });
+
+    return usuario?.rol?.nombre === "SUPERADMIN";
+  } catch (error) {
+    console.error("Error al verificar autorización:", error);
+    return false;
+  }
+};
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  // Verificar autorización
+  const isSuperAdmin = await verifySuperAdmin(req);
+  if (!isSuperAdmin) {
+    return res.status(403).json({ error: "No autorizado" });
+  }
+
   // GET - Obtener todos los certificados o uno específico
   if (req.method === "GET") {
     try {
