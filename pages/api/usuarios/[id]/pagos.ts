@@ -5,67 +5,37 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (req.method === "POST") {
-    try {
-      const { id } = req.query;
-      const { monto, metodoPago, observaciones, mesComision, anioComision } =
-        req.body;
+  const { id, mes, anio } = req.query;
 
-      // Validar datos
-      if (!monto || !metodoPago) {
-        return res.status(400).json({
-          error: "Faltan datos requeridos",
-          details: { monto: !monto, metodoPago: !metodoPago },
-        });
-      }
-
-      // Crear el pago con los datos adicionales de comisión si están presentes
-      const pago = await prisma.pagoVendedor.create({
-        data: {
-          vendedorId: Number(id),
-          monto: Number(monto),
-          metodoPago,
-          observaciones,
-          // Agregar datos de comisión si están presentes
-          ...(mesComision && anioComision
-            ? {
-                mesComision,
-                anioComision,
-                esComision: true,
-              }
-            : {}),
-        },
-      });
-
-      return res.status(201).json(pago);
-    } catch (error) {
-      console.error("Error al registrar pago:", error);
-      return res.status(500).json({ error: "Error al registrar el pago" });
-    }
+  // Validar el ID
+  if (!id || Array.isArray(id) || isNaN(Number(id))) {
+    return res.status(400).json({ error: "ID de usuario inválido" });
   }
 
-  // Endpoint para obtener los pagos de un vendedor
+  const userId = Number(id);
+
+  // GET - Obtener los pagos de un vendedor
   if (req.method === "GET") {
     try {
-      const { id } = req.query;
-      const { mes, anio } = req.query;
-
-      let whereClause: any = {
-        vendedorId: Number(id),
+      // Construir el filtro de consulta
+      const whereCondition: any = {
+        vendedorId: userId,
       };
 
-      // Si se especifican mes y año, filtrar por esos valores
+      // Si se especifica mes y año, filtrar por esos valores
       if (mes && anio) {
-        whereClause = {
-          ...whereClause,
-          mesComision: parseInt(mes as string),
-          anioComision: parseInt(anio as string),
-          esComision: true,
-        };
+        const mesNum = parseInt(Array.isArray(mes) ? mes[0] : mes);
+        const anioNum = parseInt(Array.isArray(anio) ? anio[0] : anio);
+
+        if (!isNaN(mesNum) && !isNaN(anioNum)) {
+          whereCondition.mesComision = mesNum;
+          whereCondition.anioComision = anioNum;
+        }
       }
 
+      // Obtener los pagos
       const pagos = await prisma.pagoVendedor.findMany({
-        where: whereClause,
+        where: whereCondition,
         orderBy: {
           fecha: "desc",
         },
@@ -75,6 +45,44 @@ export default async function handler(
     } catch (error) {
       console.error("Error al obtener pagos:", error);
       return res.status(500).json({ error: "Error al obtener los pagos" });
+    }
+  }
+
+  // POST - Crear un nuevo pago
+  if (req.method === "POST") {
+    try {
+      const { monto, metodoPago, observaciones, mesComision, anioComision } =
+        req.body;
+
+      // Validar datos
+      if (
+        !monto ||
+        isNaN(monto) ||
+        monto <= 0 ||
+        !metodoPago ||
+        (mesComision && isNaN(mesComision)) ||
+        (anioComision && isNaN(anioComision))
+      ) {
+        return res.status(400).json({ error: "Datos de pago inválidos" });
+      }
+
+      // Crear el pago
+      const pago = await prisma.pagoVendedor.create({
+        data: {
+          vendedorId: userId,
+          monto,
+          metodoPago,
+          observaciones,
+          esComision: mesComision && anioComision ? true : false,
+          mesComision: mesComision || null,
+          anioComision: anioComision || null,
+        },
+      });
+
+      return res.status(201).json(pago);
+    } catch (error) {
+      console.error("Error al crear pago:", error);
+      return res.status(500).json({ error: "Error al registrar el pago" });
     }
   }
 

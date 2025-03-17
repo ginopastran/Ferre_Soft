@@ -201,6 +201,16 @@ function VendedoresContent() {
   };
 
   const handleUpdateComision = async (vendedorId: number, comision: number) => {
+    // Validar que la comisión sea un número válido
+    if (isNaN(comision) || comision < 0 || comision > 100) {
+      return;
+    }
+
+    // Actualizar localmente primero para una respuesta inmediata
+    setVendedores(
+      vendedores.map((v) => (v.id === vendedorId ? { ...v, comision } : v))
+    );
+
     try {
       const response = await fetch(`/api/usuarios/${vendedorId}`, {
         method: "PUT",
@@ -209,10 +219,13 @@ function VendedoresContent() {
       });
 
       if (!response.ok) throw new Error("Error al actualizar comisión");
-      await fetchVendedores();
+
+      // No es necesario recargar todos los vendedores, ya actualizamos localmente
       toast.success("Comisión actualizada exitosamente");
     } catch (error) {
       toast.error("Error al actualizar la comisión");
+      // Revertir el cambio local en caso de error
+      await fetchVendedores();
     }
   };
 
@@ -342,12 +355,18 @@ function VendedoresContent() {
                             type="number"
                             className="w-20 p-1 border rounded"
                             value={vendedor.comision}
-                            onChange={(e) =>
+                            onChange={(e) => {
+                              e.preventDefault();
                               handleUpdateComision(
                                 vendedor.id,
                                 parseFloat(e.target.value)
-                              )
-                            }
+                              );
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                              }
+                            }}
                             step="0.01"
                             min="0"
                             max="100"

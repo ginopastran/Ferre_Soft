@@ -19,13 +19,22 @@ export default async function handler(
       });
     }
 
-    // Convertir a números
-    const mesNum = parseInt(mes as string);
-    const anioNum = parseInt(anio as string);
+    // Convertir a números y asegurarnos de que no son arrays
+    const mesNum = parseInt(Array.isArray(mes) ? mes[0] : mes);
+    const anioNum = parseInt(Array.isArray(anio) ? anio[0] : anio);
+    const userId = parseInt(Array.isArray(id) ? id[0] : id);
 
     // Validar que sean números válidos
-    if (isNaN(mesNum) || isNaN(anioNum) || mesNum < 1 || mesNum > 12) {
-      return res.status(400).json({ error: "Parámetros de fecha inválidos" });
+    if (
+      isNaN(mesNum) ||
+      isNaN(anioNum) ||
+      isNaN(userId) ||
+      mesNum < 1 ||
+      mesNum > 12
+    ) {
+      return res
+        .status(400)
+        .json({ error: "Parámetros de fecha o ID inválidos" });
     }
 
     // Calcular el primer y último día del mes
@@ -33,7 +42,7 @@ export default async function handler(
     const ultimoDia = new Date(anioNum, mesNum, 0, 23, 59, 59, 999);
 
     console.log(
-      `Buscando facturas pagadas para el vendedor ${id} entre ${primerDia.toISOString()} y ${ultimoDia.toISOString()}`
+      `Buscando facturas pagadas para el vendedor ${userId} entre ${primerDia.toISOString()} y ${ultimoDia.toISOString()}`
     );
 
     // Obtener todas las facturas del vendedor que fueron pagadas en el mes especificado
@@ -45,7 +54,7 @@ export default async function handler(
     // Primero, obtenemos las facturas del vendedor que están pagadas
     const facturas = await prisma.factura.findMany({
       where: {
-        vendedorId: Number(id),
+        vendedorId: userId,
         estado: "PAGADA",
         pagos: {
           some: {
