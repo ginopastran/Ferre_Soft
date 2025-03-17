@@ -9,10 +9,24 @@ import { prisma } from "@/lib/prisma";
 // Verificar si estamos en producción o desarrollo
 const isProduction = process.env.NODE_ENV === "production";
 
-// Asegurarse de que existe el directorio para el TA
-const taFolder = path.join(process.cwd(), "afip_res");
-if (!fs.existsSync(taFolder)) {
-  fs.mkdirSync(taFolder, { recursive: true });
+// Manejo condicional del directorio TA según el entorno
+let taFolder = "";
+try {
+  // En producción (Vercel), no intentamos crear directorios en el sistema de archivos
+  if (isProduction) {
+    // Utilizamos una ruta temporal en memoria en lugar de crear directorios
+    taFolder = "/tmp";
+  } else {
+    // En desarrollo, usamos el directorio local
+    taFolder = path.join(process.cwd(), "afip_res");
+    if (!fs.existsSync(taFolder)) {
+      fs.mkdirSync(taFolder, { recursive: true });
+    }
+  }
+} catch (error) {
+  console.error("Error al configurar directorio TA:", error);
+  // Fallback en caso de error
+  taFolder = "/tmp";
 }
 
 // Función para obtener certificados de la base de datos

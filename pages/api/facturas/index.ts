@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
 import { NextApiRequest, NextApiResponse } from "next";
-import { generarFacturaElectronica, verificarConexion } from "@/lib/afip";
 
 // Definir interfaces para los tipos de datos
 interface AfipResponse {
@@ -8,6 +7,44 @@ interface AfipResponse {
   vencimientoCae: string;
   numeroComprobante: number;
 }
+
+// Importar las funciones de AFIP solo cuando se necesiten
+const getAfipUtils = async () => {
+  try {
+    // En producción, podemos decidir si importar o no
+    if (
+      process.env.NODE_ENV === "production" &&
+      process.env.BYPASS_AFIP_IN_PRODUCTION === "true"
+    ) {
+      console.log("Modo bypass de AFIP en producción activado");
+      return {
+        verificarConexion: async () => false,
+        generarFacturaElectronica: async () => ({
+          cae: "bypass-cae",
+          vencimientoCae: new Date().toISOString().slice(0, 10),
+          numeroComprobante: 0,
+        }),
+      };
+    }
+
+    // Importar dinámicamente
+    const { verificarConexion, generarFacturaElectronica } = await import(
+      "@/lib/afip"
+    );
+    return { verificarConexion, generarFacturaElectronica };
+  } catch (error) {
+    console.error("Error al cargar funciones de AFIP:", error);
+    // Devolver funciones mock en caso de error
+    return {
+      verificarConexion: async () => false,
+      generarFacturaElectronica: async () => ({
+        cae: "error-cae",
+        vencimientoCae: new Date().toISOString().slice(0, 10),
+        numeroComprobante: 0,
+      }),
+    };
+  }
+};
 
 export default async function handler(
   req: NextApiRequest,
@@ -231,8 +268,22 @@ export default async function handler(
         // Verificar conexión con AFIP
         let afipConectado = false;
         try {
-          afipConectado = await verificarConexion();
-          console.log("Estado de conexión con AFIP:", afipConectado);
+          // Obtener las funciones de AFIP
+          const afipUtils = await getAfipUtils();
+
+          // En producción, evitar verificar conexión si se especificó bypass
+          const shouldBypassAfip =
+            process.env.NODE_ENV === "production" &&
+            process.env.BYPASS_AFIP_IN_PRODUCTION === "true";
+
+          if (!shouldBypassAfip) {
+            afipConectado = await afipUtils.verificarConexion();
+            console.log("Estado de conexión con AFIP:", afipConectado);
+          } else {
+            console.log(
+              "Saltando verificación de AFIP en producción (modo bypass)"
+            );
+          }
         } catch (afipError) {
           console.error("Error al verificar conexión con AFIP:", afipError);
           // No fallamos la creación de factura, solo registramos el error
@@ -240,10 +291,16 @@ export default async function handler(
 
         // Obtener datos de AFIP solo para facturas A y B
         try {
+          // En producción, bypass de AFIP si no hay certificados configurados
+          const shouldBypassAfip =
+            process.env.NODE_ENV === "production" &&
+            process.env.BYPASS_AFIP_IN_PRODUCTION === "true";
+
           if (
             (tipoComprobante === "FACTURA_A" ||
               tipoComprobante === "FACTURA_B") &&
-            afipConectado
+            afipConectado &&
+            !shouldBypassAfip
           ) {
             console.log("Obteniendo datos de AFIP para factura:", {
               tipoComprobante,
@@ -275,7 +332,8 @@ export default async function handler(
             }
 
             // Llamar a la función para generar factura electrónica
-            datosAfip = await generarFacturaElectronica(
+            const afipUtils = await getAfipUtils();
+            datosAfip = await afipUtils.generarFacturaElectronica(
               facturaParaAfip,
               cliente,
               detallesCompletos
@@ -286,6 +344,7 @@ export default async function handler(
             console.log("No se obtuvieron datos de AFIP:", {
               tipoComprobante,
               afipConectado,
+              shouldBypassAfip,
             });
           }
         } catch (error) {
