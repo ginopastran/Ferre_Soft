@@ -43,35 +43,46 @@ export default async function handler(
 
       console.log("Where clause:", JSON.stringify(whereClause, null, 2));
 
-      const facturas = await prisma.factura.findMany({
-        where: whereClause,
-        orderBy: {
-          fecha: "desc",
-        },
-        include: {
-          cliente: {
-            select: {
-              nombre: true,
+      try {
+        const facturas = await prisma.factura.findMany({
+          where: whereClause,
+          orderBy: {
+            fecha: "desc",
+          },
+          include: {
+            cliente: {
+              select: {
+                nombre: true,
+              },
+            },
+            vendedor: {
+              select: {
+                nombre: true,
+              },
+            },
+            detalles: {
+              include: {
+                producto: true,
+              },
             },
           },
-          vendedor: {
-            select: {
-              nombre: true,
-            },
-          },
-          detalles: {
-            include: {
-              producto: true,
-            },
-          },
-        },
-      });
+        });
 
-      console.log(`Facturas encontradas: ${facturas.length}`);
+        console.log(`Facturas encontradas: ${facturas.length}`);
 
-      return res.status(200).json(facturas);
+        return res.status(200).json(facturas);
+      } catch (dbError) {
+        console.error("Error al consultar la base de datos:", dbError);
+        return res.status(500).json({
+          error: "Error al consultar la base de datos",
+          details:
+            dbError instanceof Error
+              ? dbError.message
+              : "Unknown database error",
+        });
+      }
     } catch (error) {
-      console.error("Error al obtener facturas:", error);
+      console.error("Error en el handler GET de facturas:", error);
       return res.status(500).json({
         error: "Error al obtener facturas",
         details: error instanceof Error ? error.message : "Unknown error",
@@ -218,7 +229,14 @@ export default async function handler(
         numeroFactura = `${prefijo}${nuevoNumero.toString().padStart(8, "0")}`;
 
         // Verificar conexión con AFIP
-        const afipConectado = await verificarConexion();
+        let afipConectado = false;
+        try {
+          afipConectado = await verificarConexion();
+          console.log("Estado de conexión con AFIP:", afipConectado);
+        } catch (afipError) {
+          console.error("Error al verificar conexión con AFIP:", afipError);
+          // No fallamos la creación de factura, solo registramos el error
+        }
 
         // Obtener datos de AFIP solo para facturas A y B
         try {
