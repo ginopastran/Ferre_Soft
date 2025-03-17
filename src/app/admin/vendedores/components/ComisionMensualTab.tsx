@@ -99,7 +99,7 @@ export function ComisionMensualTab({
     setLoading(true);
     try {
       const response = await fetch(
-        `/api/usuarios/${vendedorId}/comisiones?mes=${mes}&anio=${anio}`
+        `/api/usuarios/comisiones?userId=${vendedorId}&mes=${mes}&anio=${anio}`
       );
 
       if (!response.ok) {
@@ -126,7 +126,7 @@ export function ComisionMensualTab({
   const fetchPagosExistentes = async () => {
     try {
       const response = await fetch(
-        `/api/usuarios/${vendedorId}/pagos?mes=${mes}&anio=${anio}`
+        `/api/usuarios/pagos?userId=${vendedorId}&mes=${mes}&anio=${anio}`
       );
 
       if (!response.ok) {
@@ -164,7 +164,7 @@ export function ComisionMensualTab({
 
     setProcessingPago(true);
     try {
-      const response = await fetch(`/api/usuarios/${vendedorId}/pagos`, {
+      const response = await fetch(`/api/usuarios/pagos?userId=${vendedorId}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

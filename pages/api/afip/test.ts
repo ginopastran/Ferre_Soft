@@ -1,7 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import Afip from "@afipsdk/afip.js";
-import fs from "fs";
-import path from "path";
+import { getAfipInstance } from "@/lib/afip";
 
 export default async function handler(
   req: NextApiRequest,
@@ -12,20 +10,12 @@ export default async function handler(
   }
 
   try {
-    // Leer los certificados
-    const certPath = path.join(process.cwd(), "certs", "csrtest44.cert");
-    const keyPath = path.join(process.cwd(), "certs", "keytest.key");
+    // Usar la función actualizada para obtener la instancia AFIP
+    const afip = await getAfipInstance();
 
-    const cert = fs.readFileSync(certPath, "utf8");
-    const key = fs.readFileSync(keyPath, "utf8");
-
-    // Crear instancia de AFIP
-    const afip = new Afip({
-      CUIT: process.env.AFIP_CUIT || "20461628312",
-      cert: cert,
-      key: key,
-      production: false,
-    });
+    if (!afip) {
+      throw new Error("No se pudo inicializar la conexión con AFIP");
+    }
 
     // Verificar el estado del servidor
     const serverStatus = await afip.ElectronicBilling.getServerStatus();

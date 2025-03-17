@@ -42,7 +42,7 @@ export function PagosVendedorTab({
   const fetchPagos = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/usuarios/${vendedorId}/pagos`);
+      const response = await fetch(`/api/usuarios/pagos?userId=${vendedorId}`);
       if (!response.ok) {
         throw new Error("Error al obtener pagos");
       }

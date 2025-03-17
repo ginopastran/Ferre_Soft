@@ -5,20 +5,21 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const { id } = req.query;
+  // Utilizaremos userId como query parameter en lugar de parte de la ruta
+  const { userId, includeVentas } = req.query;
 
-  if (!id || isNaN(Number(id))) {
+  if (!userId || Array.isArray(userId) || isNaN(Number(userId))) {
     return res.status(400).json({ error: "ID de usuario inválido" });
   }
+
+  const id = Number(userId);
 
   // GET - Obtener un vendedor específico
   if (req.method === "GET") {
     try {
-      const { includeVentas } = req.query;
-
       const usuario = await prisma.usuario.findUnique({
         where: {
-          id: Number(id),
+          id,
           rol: {
             nombre: "VENDEDOR",
           },
@@ -42,19 +43,35 @@ export default async function handler(
       }
 
       // Calcular totales
-      const totalVentas =
-        usuario.Factura?.reduce((sum, factura) => sum + factura.total, 0) || 0;
-      const totalPagado =
-        usuario.pagosRecibidos?.reduce((sum, pago) => sum + pago.monto, 0) || 0;
+      const totalVentas = usuario.Factura
+        ? usuario.Factura.reduce((sum, factura) => sum + factura.total, 0)
+        : 0;
+
+      const totalPagado = usuario.pagosRecibidos
+        ? usuario.pagosRecibidos.reduce((sum, pago) => sum + pago.monto, 0)
+        : 0;
+
       const comisionTotal = (totalVentas * usuario.comision) / 100;
 
+      // Crear una nueva respuesta limpia sin las propiedades que pueden causar problemas
       const vendedorConTotales = {
-        ...usuario,
+        id: usuario.id,
+        nombre: usuario.nombre,
+        dni: usuario.dni,
+        telefono: usuario.telefono,
+        email: usuario.email,
+        comision: usuario.comision,
+        sucursalId: usuario.sucursalId,
+        sucursal: usuario.sucursal
+          ? {
+              id: usuario.sucursal.id,
+              nombre: usuario.sucursal.nombre,
+              ubicacion: usuario.sucursal.ubicacion,
+            }
+          : null,
         totalVentas,
         totalPagado,
         montoPendiente: comisionTotal - totalPagado,
-        Factura: undefined,
-        pagosRecibidos: undefined,
       };
 
       return res.status(200).json(vendedorConTotales);
@@ -72,7 +89,9 @@ export default async function handler(
       // Validar datos
       if (
         comision !== undefined &&
-        (isNaN(comision) || comision < 0 || comision > 100)
+        (isNaN(Number(comision)) ||
+          Number(comision) < 0 ||
+          Number(comision) > 100)
       ) {
         return res.status(400).json({ error: "Comisión inválida" });
       }
@@ -81,16 +100,16 @@ export default async function handler(
       const updateData: any = {};
 
       if (comision !== undefined) {
-        updateData.comision = comision;
+        updateData.comision = Number(comision);
       }
 
       if (sucursalId !== undefined) {
-        updateData.sucursalId = sucursalId;
+        updateData.sucursalId = Number(sucursalId);
       }
 
       // Actualizar vendedor
       const vendedor = await prisma.usuario.update({
-        where: { id: Number(id) },
+        where: { id },
         data: updateData,
         include: {
           sucursal: true,
@@ -104,20 +123,35 @@ export default async function handler(
       });
 
       // Calcular totales
-      const totalVentas =
-        vendedor.Factura?.reduce((sum, factura) => sum + factura.total, 0) || 0;
-      const totalPagado =
-        vendedor.pagosRecibidos?.reduce((sum, pago) => sum + pago.monto, 0) ||
-        0;
+      const totalVentas = vendedor.Factura
+        ? vendedor.Factura.reduce((sum, factura) => sum + factura.total, 0)
+        : 0;
+
+      const totalPagado = vendedor.pagosRecibidos
+        ? vendedor.pagosRecibidos.reduce((sum, pago) => sum + pago.monto, 0)
+        : 0;
+
       const comisionTotal = (totalVentas * vendedor.comision) / 100;
 
+      // Crear una respuesta limpia
       const vendedorConTotales = {
-        ...vendedor,
+        id: vendedor.id,
+        nombre: vendedor.nombre,
+        dni: vendedor.dni,
+        telefono: vendedor.telefono,
+        email: vendedor.email,
+        comision: vendedor.comision,
+        sucursalId: vendedor.sucursalId,
+        sucursal: vendedor.sucursal
+          ? {
+              id: vendedor.sucursal.id,
+              nombre: vendedor.sucursal.nombre,
+              ubicacion: vendedor.sucursal.ubicacion,
+            }
+          : null,
         totalVentas,
         totalPagado,
         montoPendiente: comisionTotal - totalPagado,
-        Factura: undefined,
-        pagosRecibidos: undefined,
       };
 
       return res.status(200).json(vendedorConTotales);

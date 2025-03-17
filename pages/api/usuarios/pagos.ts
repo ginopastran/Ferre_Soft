@@ -5,9 +5,17 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  const { userId } = req.query;
+
+  if (!userId || Array.isArray(userId) || isNaN(Number(userId))) {
+    return res.status(400).json({ error: "ID de usuario inválido" });
+  }
+
+  const id = Number(userId);
+
+  // POST - Crear un nuevo pago
   if (req.method === "POST") {
     try {
-      const { id } = req.query;
       const { monto, metodoPago, observaciones, mesComision, anioComision } =
         req.body;
 
@@ -22,7 +30,7 @@ export default async function handler(
       // Crear el pago con los datos adicionales de comisión si están presentes
       const pago = await prisma.pagoVendedor.create({
         data: {
-          vendedorId: Number(id),
+          vendedorId: id,
           monto: Number(monto),
           metodoPago,
           observaciones,
@@ -44,14 +52,13 @@ export default async function handler(
     }
   }
 
-  // Endpoint para obtener los pagos de un vendedor
+  // GET - Obtener pagos de un vendedor
   if (req.method === "GET") {
     try {
-      const { id } = req.query;
       const { mes, anio } = req.query;
 
       let whereClause: any = {
-        vendedorId: Number(id),
+        vendedorId: id,
       };
 
       // Si se especifican mes y año, filtrar por esos valores

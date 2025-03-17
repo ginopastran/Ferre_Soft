@@ -10,22 +10,29 @@ export default async function handler(
   }
 
   try {
-    const { id, mes, anio } = req.query;
+    const { userId, mes, anio } = req.query;
 
-    if (!id || !mes || !anio) {
+    if (!userId || !mes || !anio) {
       return res.status(400).json({
         error: "Faltan parámetros requeridos",
-        details: { id: !id, mes: !mes, anio: !anio },
+        details: { userId: !userId, mes: !mes, anio: !anio },
       });
     }
 
     // Convertir a números
+    const userIdNum = parseInt(userId as string);
     const mesNum = parseInt(mes as string);
     const anioNum = parseInt(anio as string);
 
     // Validar que sean números válidos
-    if (isNaN(mesNum) || isNaN(anioNum) || mesNum < 1 || mesNum > 12) {
-      return res.status(400).json({ error: "Parámetros de fecha inválidos" });
+    if (
+      isNaN(userIdNum) ||
+      isNaN(mesNum) ||
+      isNaN(anioNum) ||
+      mesNum < 1 ||
+      mesNum > 12
+    ) {
+      return res.status(400).json({ error: "Parámetros inválidos" });
     }
 
     // Calcular el primer y último día del mes
@@ -33,19 +40,13 @@ export default async function handler(
     const ultimoDia = new Date(anioNum, mesNum, 0, 23, 59, 59, 999);
 
     console.log(
-      `Buscando facturas pagadas para el vendedor ${id} entre ${primerDia.toISOString()} y ${ultimoDia.toISOString()}`
+      `Buscando facturas pagadas para el vendedor ${userIdNum} entre ${primerDia.toISOString()} y ${ultimoDia.toISOString()}`
     );
 
     // Obtener todas las facturas del vendedor que fueron pagadas en el mes especificado
-    // Necesitamos encontrar facturas donde:
-    // 1. El vendedor es el especificado
-    // 2. La factura está en estado PAGADA
-    // 3. La factura tiene al menos un pago realizado en el mes especificado
-
-    // Primero, obtenemos las facturas del vendedor que están pagadas
     const facturas = await prisma.factura.findMany({
       where: {
-        vendedorId: Number(id),
+        vendedorId: userIdNum,
         estado: "PAGADA",
         pagos: {
           some: {

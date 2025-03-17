@@ -49,7 +49,7 @@ function VendedorContent() {
   const fetchVendedor = async () => {
     try {
       const response = await fetch(
-        `/api/usuarios/${params?.id}?includeVentas=true`
+        `/api/usuarios/vendedor?userId=${params?.id}&includeVentas=true`
       );
       if (!response.ok) throw new Error("Vendedor no encontrado");
       const data = await response.json();

@@ -4,6 +4,7 @@ import path from "path";
 import fs from "fs";
 import { promises as fsPromises } from "fs";
 import Afip from "@afipsdk/afip.js";
+import { prisma } from "@/lib/prisma";
 
 // Verificar si estamos en producción o desarrollo
 const isProduction = process.env.NODE_ENV === "production";
@@ -14,31 +15,85 @@ if (!fs.existsSync(taFolder)) {
   fs.mkdirSync(taFolder, { recursive: true });
 }
 
+// Función para obtener certificados de la base de datos
+const getCertificatesFromDB = async () => {
+  try {
+    // Obtener certificado y clave activos
+    const cert = await prisma.afipCertificate.findFirst({
+      where: { type: "CERT", isActive: true },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const key = await prisma.afipCertificate.findFirst({
+      where: { type: "KEY", isActive: true },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (!cert || !key) {
+      console.error(
+        "No se encontraron certificados activos en la base de datos"
+      );
+      return null;
+    }
+
+    return { cert: cert.content, key: key.content };
+  } catch (error) {
+    console.error("Error al obtener certificados de la base de datos:", error);
+    return null;
+  }
+};
+
+// Función para obtener certificados de archivos locales como fallback
+const getCertificatesFromFiles = async () => {
+  try {
+    const certPath =
+      process.env.AFIP_CERT_PATH ||
+      path.join(process.cwd(), "certs/csrtest44.crt");
+    const keyPath =
+      process.env.AFIP_KEY_PATH ||
+      path.join(process.cwd(), "certs/keytest.key");
+
+    const cert = fs.readFileSync(certPath, "utf8");
+    const key = fs.readFileSync(keyPath, "utf8");
+
+    return { cert, key };
+  } catch (error) {
+    console.error("Error al leer certificados desde archivos:", error);
+    return null;
+  }
+};
+
 // Configuración de AFIP
-const afipConfig = {
-  CUIT: process.env.AFIP_CUIT || "20461628312", // CUIT por defecto para testing
-  cert:
-    process.env.AFIP_CERT_PATH ||
-    path.join(process.cwd(), "certs/csrtest44.cert"),
-  key:
-    process.env.AFIP_KEY_PATH || path.join(process.cwd(), "certs/keytest.key"),
-  production: isProduction,
-  res_folder: taFolder,
-  ta_folder: taFolder,
+const getAfipConfig = async () => {
+  // Primero intentamos obtener certificados de la base de datos
+  let certificates = await getCertificatesFromDB();
+
+  // Si no hay certificados en la base de datos, intentamos leerlos de archivos
+  if (!certificates) {
+    certificates = await getCertificatesFromFiles();
+
+    if (!certificates) {
+      throw new Error("No se pudieron obtener los certificados de AFIP");
+    }
+  }
+
+  return {
+    CUIT: process.env.AFIP_CUIT || "20461628312", // CUIT por defecto para testing
+    cert: certificates.cert,
+    key: certificates.key,
+    production: isProduction,
+    res_folder: taFolder,
+    ta_folder: taFolder,
+  };
 };
 
 // Verificar que los certificados existen
-const checkCertificates = () => {
+const checkCertificates = async () => {
   try {
-    if (!fsPromises.access(afipConfig.cert)) {
-      console.error(`Certificado no encontrado en: ${afipConfig.cert}`);
-      return false;
-    }
-    if (!fsPromises.access(afipConfig.key)) {
-      console.error(`Clave privada no encontrada en: ${afipConfig.key}`);
-      return false;
-    }
-    return true;
+    const config = await getAfipConfig();
+    // Dado que ahora los certificados pueden estar en la base de datos,
+    // simplemente verificamos que tenemos contenido
+    return !!config.cert && !!config.key;
   } catch (error) {
     console.error("Error al verificar certificados:", error);
     return false;
@@ -100,20 +155,15 @@ export const extendAfipSDK = (afip: any) => {
 export async function getAfipInstance() {
   if (!afipInstance) {
     try {
-      const certPath = path.join(process.cwd(), "certs", "csrtest44.cert");
-      const keyPath = path.join(process.cwd(), "certs", "keytest.key");
-
-      // Leer los certificados
-      const cert = fs.readFileSync(certPath, "utf8");
-      const key = fs.readFileSync(keyPath, "utf8");
+      const config = await getAfipConfig();
 
       afipInstance = new Afip({
-        CUIT: 20461628312, // CUIT del emisor (tu empresa)
-        cert: cert,
-        key: key,
-        production: false,
-        res_folder: taFolder,
-        ta_folder: taFolder,
+        CUIT: Number(config.CUIT),
+        cert: config.cert,
+        key: config.key,
+        production: config.production,
+        res_folder: config.res_folder,
+        ta_folder: config.ta_folder,
       });
 
       // Extender el SDK con la función createPDF

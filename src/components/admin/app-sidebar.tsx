@@ -144,6 +144,11 @@ export function AppSidebar({ activeUrl, ...props }: AppSidebarProps) {
         url: "/admin/vendedores",
         icon: Users,
       },
+      {
+        title: "Configuración",
+        url: "/admin/configuracion/afip",
+        icon: Settings2,
+      },
     ];
   }, [isVendedor]);
 
