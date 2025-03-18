@@ -13,13 +13,5 @@
         }
       ]
     }
-  ],
-  "env": {
-    "BYPASS_AFIP_IN_PRODUCTION": "true"
-  },
-  "build": {
-    "env": {
-      "BYPASS_AFIP_IN_PRODUCTION": "true"
-    }
-  }
+  ]
 }
