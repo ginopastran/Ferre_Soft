@@ -18,6 +18,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState({ email: "", password: "" });
+  const [isLoading, setIsLoading] = useState(false);
 
   const validateForm = () => {
     const newErrors = { email: "", password: "" };
@@ -48,6 +49,8 @@ export default function LoginPage() {
 
     if (!validateForm()) return;
 
+    setIsLoading(true);
+
     try {
       if (!isOnline) {
         const stored = localStorage.getItem("offlineCredentials");
@@ -55,6 +58,12 @@ export default function LoginPage() {
           const credentials = JSON.parse(stored);
           if (credentials.email === email) {
             updateUser(credentials.user);
+            console.log(
+              "Redirigiendo a:",
+              credentials.user.rol.nombre === "ADMIN"
+                ? "/admin/reporte"
+                : "/admin/ventas"
+            );
             router.push(
               credentials.user.rol.nombre === "ADMIN"
                 ? "/admin/reporte"
@@ -64,9 +73,11 @@ export default function LoginPage() {
           }
         }
         toast.error("No hay credenciales guardadas para modo offline");
+        setIsLoading(false);
         return;
       }
 
+      console.log("Iniciando sesión con:", email);
       const response = await fetch("/api/login", {
         method: "POST",
         headers: {
@@ -81,13 +92,24 @@ export default function LoginPage() {
       }
 
       const data = await response.json();
+      console.log("Login exitoso, obteniendo sesión...");
 
       const sessionResponse = await fetch("/api/auth/session", {
         headers: {
           "X-App-ID": process.env.NEXT_PUBLIC_APP_ID || "",
         },
       });
+
+      if (!sessionResponse.ok) {
+        throw new Error("Error al obtener la sesión");
+      }
+
       const sessionData = await sessionResponse.json();
+      console.log("Datos de sesión:", sessionData);
+
+      if (!sessionData.user) {
+        throw new Error("No se pudo obtener la información del usuario");
+      }
 
       saveOfflineCredentials({
         email,
@@ -95,15 +117,23 @@ export default function LoginPage() {
       });
 
       updateUser(sessionData.user);
-      router.push(
+
+      const redirectPath =
         sessionData.user.rol.nombre === "ADMIN"
           ? "/admin/reporte"
-          : "/admin/ventas"
-      );
+          : "/admin/ventas";
+      console.log("Redirigiendo a:", redirectPath);
+
+      // Esperar un momento para que se actualice el estado
+      setTimeout(() => {
+        router.push(redirectPath);
+      }, 100);
     } catch (error) {
+      console.error("Error en login:", error);
       toast.error("Error al iniciar sesión", {
         description: "Verifica tus credenciales e intenta nuevamente",
       });
+      setIsLoading(false);
     }
   };
 
@@ -127,6 +157,7 @@ export default function LoginPage() {
               placeholder="tu@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              disabled={isLoading}
             />
             {errors.email && (
               <p className="text-sm text-red-500 mt-1">{errors.email}</p>
@@ -139,14 +170,19 @@ export default function LoginPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              disabled={isLoading}
             />
             {errors.password && (
               <p className="text-sm text-red-500 mt-1">{errors.password}</p>
             )}
           </div>
 
-          <Button type="submit" className="w-full bg-indigo-gradient">
-            Iniciar Sesión
+          <Button
+            type="submit"
+            className="w-full bg-indigo-gradient"
+            disabled={isLoading}
+          >
+            {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
           </Button>
         </form>
 

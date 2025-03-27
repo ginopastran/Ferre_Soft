@@ -50,6 +50,17 @@ export default async function handler(
   }
 
   try {
+    // También podemos manejar cookies directamente
+    const token = req.cookies.token;
+    if (token) {
+      console.log(
+        "Cookie token encontrada directamente:",
+        token.substring(0, 20) + "..."
+      );
+    } else {
+      console.log("Cookie token no encontrada directamente en req.cookies");
+    }
+
     const session = await getSession(req);
     console.log("Sesión obtenida:", session);
 
@@ -68,6 +79,20 @@ export default async function handler(
     if (!user) {
       console.log("Usuario no encontrado en la base de datos");
       return res.status(200).json({ user: null });
+    }
+
+    // Si todo sale bien, refrescamos las cookies para mantener la sesión
+    if (token && process.env.NODE_ENV === "development") {
+      // No necesitamos SameSite=None y Secure en desarrollo
+      res.setHeader("Set-Cookie", [
+        `token=${token}; Path=/; Max-Age=86400; HttpOnly`,
+        `userData=${JSON.stringify({
+          id: user.id,
+          nombre: user.nombre,
+          email: user.email,
+          rol: user.rol,
+        })}; Path=/; Max-Age=86400`,
+      ]);
     }
 
     return res.status(200).json({

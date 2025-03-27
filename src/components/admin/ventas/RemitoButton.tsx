@@ -32,31 +32,71 @@ export function RemitoButton({ remito, onUpdate }: RemitoButtonProps) {
   const handlePrintRemito = async () => {
     if (isPrintLoading) return;
 
-    const toastId = toast.loading("Preparando impresión del remito...");
-    setIsPrintLoading(true);
-
     try {
-      // Crear un enlace para imprimir el remito
-      const link = document.createElement("a");
-      link.href = `/api/remitos/pdf?remitoId=${remito.id}`;
-      link.target = "_blank";
+      setIsPrintLoading(true);
+      const toastId = toast.loading("Preparando descarga del remito...");
 
-      // Simular clic en el enlace para abrir en nueva pestaña
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // Verificar que el remito tenga ID
+      if (!remito.id) {
+        toast.error("Error: ID de remito no disponible");
+        setIsPrintLoading(false);
+        toast.dismiss(toastId);
+        return;
+      }
 
-      toast.dismiss(toastId);
-      toast.success("Remito listo para imprimir");
+      // Añadir un timestamp para evitar caché
+      const timestamp = new Date().getTime();
+      const downloadUrl = `/api/remitos/pdf?remitoId=${remito.id}&t=${timestamp}`;
+
+      try {
+        // Hacer un fetch directamente de la URL del PDF
+        const response = await fetch(downloadUrl);
+
+        // Verificar si la respuesta fue exitosa
+        if (!response.ok) {
+          throw new Error(`Error HTTP: ${response.status}`);
+        }
+
+        // Obtener el blob del PDF
+        const blob = await response.blob();
+
+        // Verificar que el blob tenga contenido
+        if (blob.size === 0) {
+          throw new Error("El PDF generado está vacío");
+        }
+
+        // Crear un nombre de archivo para la descarga
+        const filename = `remito-${remito.numero}.pdf`;
+
+        // Crear una URL para el blob
+        const url = window.URL.createObjectURL(blob);
+
+        // Crear un enlace temporal para la descarga
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.style.display = "none";
+        document.body.appendChild(a);
+        a.click();
+
+        // Limpiar recursos
+        setTimeout(() => {
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+        }, 100);
+
+        toast.dismiss(toastId);
+        toast.success("Remito descargado correctamente");
+        setIsPrintLoading(false);
+      } catch (error) {
+        console.error("Error al descargar el remito:", error);
+        toast.error("No se pudo descargar el remito");
+        setIsPrintLoading(false);
+        toast.dismiss(toastId);
+      }
     } catch (error) {
-      console.error("Error al preparar remito para impresión:", error);
-      toast.dismiss(toastId);
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Error al preparar el remito para impresión"
-      );
-    } finally {
+      console.error("Error al descargar remito:", error);
+      toast.error("Error al descargar el remito");
       setIsPrintLoading(false);
     }
   };

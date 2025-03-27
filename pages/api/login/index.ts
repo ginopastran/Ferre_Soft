@@ -78,12 +78,21 @@ export default async function handler(
         rol: user.rol,
       };
 
-      res.setHeader("Set-Cookie", [
-        `token=${jwt}; Path=/; Max-Age=86400; HttpOnly; SameSite=None; Secure`,
-        `userData=${JSON.stringify(
-          userData
-        )}; Path=/; Max-Age=86400; SameSite=None; Secure`,
-      ]);
+      // Configurar las cookies en desarrollo sin SameSite=None y Secure
+      if (process.env.NODE_ENV === "development") {
+        res.setHeader("Set-Cookie", [
+          `token=${jwt}; Path=/; Max-Age=86400; HttpOnly`,
+          `userData=${JSON.stringify(userData)}; Path=/; Max-Age=86400`,
+        ]);
+      } else {
+        // En producción, usar SameSite=None y Secure
+        res.setHeader("Set-Cookie", [
+          `token=${jwt}; Path=/; Max-Age=86400; HttpOnly; SameSite=None; Secure`,
+          `userData=${JSON.stringify(
+            userData
+          )}; Path=/; Max-Age=86400; SameSite=None; Secure`,
+        ]);
+      }
 
       console.log("Token generado:", jwt);
       console.log("Cookie establecida en el login");

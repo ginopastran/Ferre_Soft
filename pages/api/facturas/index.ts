@@ -332,14 +332,51 @@ export default async function handler(
             }
 
             // Llamar a la función para generar factura electrónica
-            const afipUtils = await getAfipUtils();
-            datosAfip = await afipUtils.generarFacturaElectronica(
-              facturaParaAfip,
-              cliente,
-              detallesCompletos
-            );
+            try {
+              const afipUtils = await getAfipUtils();
+              datosAfip = await afipUtils.generarFacturaElectronica(
+                facturaParaAfip,
+                cliente,
+                detallesCompletos
+              );
 
-            console.log("Datos obtenidos de AFIP:", datosAfip);
+              console.log("Datos obtenidos de AFIP:", datosAfip);
+            } catch (afipError) {
+              // Verificar si es un error específico que debemos manejar de forma especial
+              const errorMsg =
+                afipError instanceof Error
+                  ? afipError.message
+                  : String(afipError);
+
+              // Errores que requieren atención especial
+              if (
+                errorMsg.includes(
+                  "Debe emitir una factura de crédito electrónica (FCE)"
+                )
+              ) {
+                return res.status(400).json({
+                  error: "Error de validación AFIP",
+                  message: "Este cliente requiere factura MiPyME",
+                  details: errorMsg,
+                });
+              } else if (errorMsg.includes("CUIT")) {
+                return res.status(400).json({
+                  error: "Error de validación AFIP",
+                  message:
+                    "El CUIT del cliente no es válido o no está autorizado",
+                  details: errorMsg,
+                });
+              } else if (errorMsg.includes("Comprobante ya registrado")) {
+                return res.status(400).json({
+                  error: "Error de validación AFIP",
+                  message: "El comprobante ya fue registrado anteriormente",
+                  details: errorMsg,
+                });
+              }
+
+              // Re-lanzar el error para el catch general
+              throw afipError;
+            }
           } else {
             console.log("No se obtuvieron datos de AFIP:", {
               tipoComprobante,
@@ -349,6 +386,29 @@ export default async function handler(
           }
         } catch (error) {
           console.error("Error al obtener datos de AFIP:", error);
+
+          // Manejamos el error según su naturaleza
+          const errorMsg =
+            error instanceof Error ? error.message : String(error);
+
+          // Para ciertos errores, devolvemos respuesta inmediata
+          if (
+            errorMsg.includes("validación") ||
+            errorMsg.includes("CUIT") ||
+            errorMsg.includes("MiPyME") ||
+            errorMsg.includes("certificados")
+          ) {
+            return res.status(400).json({
+              error: "Error al procesar con AFIP",
+              message: errorMsg,
+            });
+          }
+
+          // Para otros errores, continuamos y registramos la factura sin datos de AFIP
+          console.warn(
+            "Continuando sin datos de AFIP debido a error:",
+            errorMsg
+          );
         }
 
         // Crear factura y actualizar stock en una transacción

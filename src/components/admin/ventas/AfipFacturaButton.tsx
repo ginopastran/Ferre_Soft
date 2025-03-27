@@ -38,42 +38,81 @@ export function AfipFacturaButton({
   const handleDownloadAfipPDF = async () => {
     if (isLoading) return;
 
-    const toastId = toast.loading("Descargando factura oficial de AFIP...");
-    setIsLoading(true);
-
     try {
-      // Verificar primero si la factura está disponible
-      const checkResponse = await fetch(
-        `/api/afip/check-pdf?facturaId=${factura.id}`
-      );
+      setIsLoading(true);
+      const toastId = toast.loading("Preparando descarga de factura...");
 
-      if (!checkResponse.ok) {
-        const errorData = await checkResponse.json();
-        throw new Error(errorData.error || "Error al verificar la factura");
+      // Verificar que la factura tenga ID
+      if (!factura.id) {
+        toast.error("Error: ID de factura no disponible");
+        setIsLoading(false);
+        toast.dismiss(toastId);
+        return;
       }
 
-      // Crear un enlace para descargar el PDF
-      const link = document.createElement("a");
-      link.href = `/api/afip/pdf?facturaId=${factura.id}`;
-      link.target = "_blank";
-      link.download = `factura_afip_${factura.numero}.pdf`;
+      // Añadir un timestamp para evitar caché
+      const timestamp = new Date().getTime();
+      const downloadUrl = `/api/afip/pdf?facturaId=${factura.id}&t=${timestamp}`;
 
-      // Simular clic en el enlace para iniciar la descarga
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      try {
+        // Hacer un fetch directamente de la URL del PDF
+        const response = await fetch(downloadUrl);
 
-      toast.dismiss(toastId);
-      toast.success("Descarga iniciada");
+        // Verificar si la respuesta fue exitosa
+        if (!response.ok) {
+          throw new Error(`Error HTTP: ${response.status}`);
+        }
+
+        // Obtener el blob del PDF
+        const blob = await response.blob();
+
+        // Verificar que el blob tenga contenido
+        if (blob.size === 0) {
+          throw new Error("El PDF generado está vacío");
+        }
+
+        // Determinar si es nota de crédito
+        const esNotaCredito = factura.tipoComprobante.includes("NOTA_CREDITO");
+        const tipoFactura = factura.tipoComprobante.split("_")[1] || ""; // Extrae "A", "B", etc.
+
+        // Crear un nombre de archivo para la descarga
+        const filename = esNotaCredito
+          ? `notacredito${tipoFactura.toLowerCase()}-${factura.numero}.pdf`
+          : `factura${tipoFactura.toLowerCase()}-${factura.numero}.pdf`;
+
+        // Crear una URL para el blob
+        const url = window.URL.createObjectURL(blob);
+
+        // Crear un enlace temporal para la descarga
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.style.display = "none";
+        document.body.appendChild(a);
+        a.click();
+
+        // Limpiar recursos
+        setTimeout(() => {
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+        }, 100);
+
+        toast.dismiss(toastId);
+        toast.success(
+          `${
+            esNotaCredito ? "Nota de crédito" : "Factura"
+          } descargada correctamente`
+        );
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Error al descargar la factura:", error);
+        toast.error("No se pudo descargar la factura");
+        setIsLoading(false);
+        toast.dismiss(toastId);
+      }
     } catch (error) {
-      console.error("Error al descargar PDF de AFIP:", error);
-      toast.dismiss(toastId);
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Error al descargar la factura de AFIP"
-      );
-    } finally {
+      console.error("Error al descargar factura:", error);
+      toast.error("Error al descargar la factura");
       setIsLoading(false);
     }
   };
@@ -128,7 +167,7 @@ export function AfipFacturaButton({
         disabled={isLoading}
       >
         <FileDown className="h-4 w-4 mr-2" />
-        {isLoading ? "Descargando..." : "Descargar Factura Oficial AFIP"}
+        {isLoading ? "Preparando..." : "Ver/Descargar Factura AFIP"}
       </Button>
 
       {factura.estado !== "ANULADA" && (

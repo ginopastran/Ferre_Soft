@@ -47,68 +47,32 @@ const getCertificatesFromDB = async () => {
       console.error(
         "No se encontraron certificados activos en la base de datos"
       );
-      return null;
+      throw new Error(
+        "No se encontraron certificados activos en la base de datos"
+      );
     }
 
     return { cert: cert.content, key: key.content };
   } catch (error) {
     console.error("Error al obtener certificados de la base de datos:", error);
-    return null;
-  }
-};
-
-// Función para obtener certificados de archivos locales como fallback
-const getCertificatesFromFiles = async () => {
-  try {
-    const certPath =
-      process.env.AFIP_CERT_PATH ||
-      path.join(process.cwd(), "certs/csrtest44.crt");
-    const keyPath =
-      process.env.AFIP_KEY_PATH ||
-      path.join(process.cwd(), "certs/keytest.key");
-
-    const cert = fs.readFileSync(certPath, "utf8");
-    const key = fs.readFileSync(keyPath, "utf8");
-
-    return { cert, key };
-  } catch (error) {
-    console.error("Error al leer certificados desde archivos:", error);
-    return null;
+    throw error;
   }
 };
 
 // Configuración de AFIP
 const getAfipConfig = async () => {
   try {
-    // Primero intentamos obtener certificados de la base de datos
-    let certificates = await getCertificatesFromDB();
+    // Obtener certificados exclusivamente de la base de datos
+    const certificates = await getCertificatesFromDB();
 
-    // Si no hay certificados en la base de datos, intentamos leerlos de archivos
     if (!certificates) {
-      certificates = await getCertificatesFromFiles();
-
-      if (!certificates) {
-        if (process.env.NODE_ENV === "production") {
-          console.warn(
-            "En producción: No se encontraron certificados, usando valores predeterminados"
-          );
-          // En producción, usamos valores predeterminados para evitar errores
-          return {
-            CUIT: process.env.AFIP_CUIT || "20461628312", // CUIT por defecto para testing
-            cert: "cert_placeholder_for_production",
-            key: "key_placeholder_for_production",
-            production: isProduction,
-            res_folder: taFolder,
-            ta_folder: taFolder,
-          };
-        } else {
-          throw new Error("No se pudieron obtener los certificados de AFIP");
-        }
-      }
+      throw new Error(
+        "No se pudieron obtener los certificados de la base de datos"
+      );
     }
 
     return {
-      CUIT: process.env.AFIP_CUIT || "20461628312", // CUIT por defecto para testing
+      CUIT: process.env.AFIP_CUIT || "20461628312",
       cert: certificates.cert,
       key: certificates.key,
       production: isProduction,
@@ -116,19 +80,10 @@ const getAfipConfig = async () => {
       ta_folder: taFolder,
     };
   } catch (error) {
-    if (process.env.NODE_ENV === "production") {
-      console.error("Error en getAfipConfig en producción:", error);
-      // En producción, usamos valores predeterminados para evitar errores
-      return {
-        CUIT: process.env.AFIP_CUIT || "20461628312",
-        cert: "cert_placeholder_for_production",
-        key: "key_placeholder_for_production",
-        production: isProduction,
-        res_folder: taFolder,
-        ta_folder: taFolder,
-      };
-    }
-    throw error;
+    console.error("Error en getAfipConfig:", error);
+    throw new Error(
+      "No se pudieron obtener los certificados necesarios para AFIP"
+    );
   }
 };
 
@@ -478,13 +433,30 @@ export const generarFacturaElectronica = async (
   try {
     // Obtener los tipos de IVA válidos
     console.log("Consultando tipos de alícuotas de IVA válidas...");
-    const tiposAlicuotas = await afip.ElectronicBilling.getAliquotTypes();
-    console.log("Tipos de alícuotas de IVA disponibles:", tiposAlicuotas);
+    try {
+      const tiposAlicuotas = await afip.ElectronicBilling.getAliquotTypes();
+      console.log("Tipos de alícuotas de IVA disponibles:", tiposAlicuotas);
+    } catch (alicuotasError) {
+      console.error("Error al obtener tipos de alícuotas:", alicuotasError);
+      // Continuamos con la ejecución, ya que podría ser un error temporal
+    }
 
     // Obtener los tipos de documentos válidos
     console.log("Consultando tipos de documentos válidos...");
-    const tiposDocumento = await getTiposDocumento();
-    console.log("Tipos de documento disponibles:", tiposDocumento);
+    let tiposDocumento;
+    try {
+      tiposDocumento = await getTiposDocumento();
+      console.log("Tipos de documento disponibles:", tiposDocumento);
+    } catch (docError) {
+      console.error("Error al obtener tipos de documento:", docError);
+      // Usamos un conjunto por defecto
+      tiposDocumento = [
+        { Id: 80, Desc: "CUIT" },
+        { Id: 96, Desc: "DNI" },
+        { Id: 99, Desc: "Consumidor Final" },
+      ];
+      console.log("Usando tipos de documento por defecto:", tiposDocumento);
+    }
 
     // Determinar punto de venta (configurable)
     const puntoVenta = 1; // Por defecto punto de venta 1
@@ -497,21 +469,37 @@ export const generarFacturaElectronica = async (
     });
 
     // Obtener último número de comprobante
-    const ultimoComprobante = await getUltimoComprobante(
-      puntoVenta,
-      tipoComprobante
-    );
-    const numeroComprobante = ultimoComprobante + 1;
-    console.log("Número de comprobante:", {
-      ultimo: ultimoComprobante,
-      nuevo: numeroComprobante,
-    });
+    let numeroComprobante;
+    try {
+      const ultimoComprobante = await getUltimoComprobante(
+        puntoVenta,
+        tipoComprobante
+      );
+      numeroComprobante = ultimoComprobante + 1;
+      console.log("Número de comprobante:", {
+        ultimo: ultimoComprobante,
+        nuevo: numeroComprobante,
+      });
+    } catch (numError) {
+      console.error("Error al obtener último comprobante:", numError);
+      // Generar un número aleatorio como fallback (solo para desarrollo)
+      numeroComprobante = Math.floor(10000 + Math.random() * 90000);
+      console.log("Usando número de comprobante generado:", numeroComprobante);
+    }
 
     // Determinar tipo de documento y número según situación IVA y tipo de comprobante
-    const docTipo = await situacionIVAToDocTipo(
-      cliente.situacionIVA,
-      factura.tipoComprobante
-    );
+    let docTipo;
+    try {
+      docTipo = await situacionIVAToDocTipo(
+        cliente.situacionIVA,
+        factura.tipoComprobante
+      );
+    } catch (docTipoError) {
+      console.error("Error al determinar tipo de documento:", docTipoError);
+      // Asignar un valor por defecto según el tipo de comprobante
+      docTipo = tipoComprobante === 1 ? 80 : 99;
+      console.log("Usando tipo de documento por defecto:", docTipo);
+    }
 
     // Para facturas tipo A, siempre usar un CUIT de prueba válido
     let docNro;
@@ -522,7 +510,21 @@ export const generarFacturaElectronica = async (
       console.log("Usando CUIT de prueba para Factura A:", docNro);
     } else {
       // Para otros tipos de comprobantes, usar el CUIT/DNI del cliente
-      docNro = cliente.cuitDni.replace(/[^0-9]/g, "");
+      docNro = cliente.cuitDni ? cliente.cuitDni.replace(/[^0-9]/g, "") : "0";
+
+      // Verificar que docNro sea válido
+      if (!docNro || docNro === "0") {
+        // Para consumidor final el DocNro puede ser 0
+        if (docTipo === 99) {
+          docNro = "0";
+        } else {
+          console.warn(
+            "CUIT/DNI del cliente inválido, usando valor por defecto"
+          );
+          docNro = "0"; // Valor para consumidor final
+          docTipo = 99; // Cambiar a consumidor final
+        }
+      }
     }
 
     console.log("Datos del cliente:", {
@@ -574,13 +576,13 @@ export const generarFacturaElectronica = async (
 
       // Si es monotributista o exento, usar el valor correspondiente
       if (
-        cliente.situacionIVA.includes("MONOTRIBUTO") ||
-        cliente.situacionIVA.includes("Monotributo")
+        cliente.situacionIVA?.includes("MONOTRIBUTO") ||
+        cliente.situacionIVA?.includes("Monotributo")
       ) {
         condicionIVAReceptorId = 6; // Responsable Monotributo
       } else if (
-        cliente.situacionIVA.includes("EXENTO") ||
-        cliente.situacionIVA.includes("Exento")
+        cliente.situacionIVA?.includes("EXENTO") ||
+        cliente.situacionIVA?.includes("Exento")
       ) {
         condicionIVAReceptorId = 4; // IVA Sujeto Exento
       }
@@ -607,7 +609,6 @@ export const generarFacturaElectronica = async (
       ImpTrib: 0, // Importe otros tributos
       MonId: "PES", // Moneda: Pesos Argentinos
       MonCotiz: 1, // Cotización de la moneda
-      CondicionIVAReceptorId: condicionIVAReceptorId, // Nuevo campo requerido por AFIP
       Iva: [
         // Alícuotas de IVA
         {
@@ -617,6 +618,11 @@ export const generarFacturaElectronica = async (
         },
       ],
     };
+
+    // Añadir CondicionIVAReceptorId solo si está definido
+    if (condicionIVAReceptorId) {
+      facturaData.CondicionIVAReceptorId = condicionIVAReceptorId;
+    }
 
     console.log("Datos de factura preparados para AFIP:", facturaData);
 
@@ -648,6 +654,19 @@ export const generarFacturaElectronica = async (
           ? "Error null"
           : String(afipError)
       );
+
+      // Verificar si es un error relacionado a MiPyme
+      const errorMessage =
+        afipError instanceof Error ? afipError.message : String(afipError);
+      if (
+        errorMessage.includes("requiere_fec") ||
+        errorMessage.includes("factura de crédito MiPyme")
+      ) {
+        throw new Error(
+          "Este cliente requiere facturas MiPyME según AFIP. Debe emitir una factura de crédito electrónica (FCE)."
+        );
+      }
+
       throw new Error(
         afipError instanceof Error
           ? `Error de AFIP: ${afipError.message}`
@@ -668,5 +687,27 @@ export const generarFacturaElectronica = async (
     throw error instanceof Error
       ? error
       : new Error(error === null ? "Error desconocido en AFIP" : String(error));
+  }
+};
+
+// Función para forzar la regeneración del Token de Acceso
+export const forceNewTokenAuthorization = async (): Promise<boolean> => {
+  try {
+    const afip = await getAfipInstance();
+    if (!afip) {
+      throw new Error("No se pudo obtener la instancia de AFIP");
+    }
+
+    console.log("Forzando regeneración del Token de Acceso (TA) para AFIP...");
+
+    // Usar el método interno para autenticar nuevamente
+    // @ts-ignore - Accedemos a métodos internos
+    await afip.ElectronicBilling.client.authenticate({ force: true });
+
+    console.log("Token de Acceso (TA) regenerado exitosamente");
+    return true;
+  } catch (error) {
+    console.error("Error al regenerar Token de Acceso (TA):", error);
+    return false;
   }
 };

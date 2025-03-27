@@ -2,22 +2,21 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "@/lib/prisma";
 import fs from "fs";
 import path from "path";
-import QRCode from "qrcode";
 import React from "react";
 import ReactDOMServer from "react-dom/server";
-import { FacturaTemplate } from "../../../components/FacturaTemplate";
+import { RemitoTemplate } from "../../../components/RemitoTemplate";
 import htmlPdf from "html-pdf-node";
 
 // Leer los estilos CSS
-let facturaStyles: string;
+let remitoStyles: string;
 try {
-  facturaStyles = fs.readFileSync(
-    path.join(process.cwd(), "styles/factura.css"),
+  remitoStyles = fs.readFileSync(
+    path.join(process.cwd(), "styles/remito.css"),
     "utf8"
   );
 } catch (error) {
   console.warn("No se pudo cargar el archivo CSS, usando estilos por defecto");
-  facturaStyles = `
+  remitoStyles = `
     .wrapper {
       border: 1px solid #000;
       padding: 10px;
@@ -142,17 +141,20 @@ export default async function handler(
   });
 
   try {
-    const { facturaId } = req.query;
+    const { remitoId } = req.query;
 
-    if (!facturaId || typeof facturaId !== "string") {
-      return res.status(400).json({ error: "ID de factura requerido" });
+    if (!remitoId || typeof remitoId !== "string") {
+      return res.status(400).json({ error: "ID de remito requerido" });
     }
 
-    console.log(`[PDF] Iniciando generación de PDF para factura ${facturaId}`);
+    console.log(`[PDF] Iniciando generación de PDF para remito ${remitoId}`);
 
-    // Obtener datos de la factura
-    const factura = await prisma.factura.findUnique({
-      where: { id: facturaId },
+    // Obtener datos del remito
+    const remito = await prisma.factura.findUnique({
+      where: {
+        id: remitoId,
+        tipoComprobante: "REMITO",
+      },
       include: {
         cliente: true,
         detalles: {
@@ -163,115 +165,35 @@ export default async function handler(
       },
     });
 
-    if (!factura) {
-      return res.status(404).json({ error: "Factura no encontrada" });
+    if (!remito) {
+      return res.status(404).json({ error: "Remito no encontrado" });
     }
 
-    if (
-      !factura.cae &&
-      factura.tipoComprobante !== "REMITO" &&
-      !factura.tipoComprobante.includes("REMITO")
-    ) {
-      return res
-        .status(400)
-        .json({ error: "La factura no tiene un CAE válido" });
-    }
-
-    console.log(`[PDF] Factura encontrada, preparando datos para el template`);
-
-    // Mapear tipo de comprobante
-    const tipoComprobante =
-      factura.tipoComprobante === "FACTURA_A"
-        ? "A"
-        : factura.tipoComprobante === "FACTURA_B"
-        ? "B"
-        : "C";
-
-    // Código de comprobante
-    const codigoComprobante =
-      factura.tipoComprobante === "FACTURA_A"
-        ? "01"
-        : factura.tipoComprobante === "FACTURA_B"
-        ? "06"
-        : factura.tipoComprobante === "NOTA_CREDITO_A"
-        ? "03"
-        : factura.tipoComprobante === "NOTA_CREDITO_B"
-        ? "08"
-        : "11";
+    console.log(`[PDF] Remito encontrado, preparando datos para el template`);
 
     // Formatear fecha
-    const fechaEmision = new Date(factura.fecha).toLocaleDateString();
-    const fechaVencimientoCae = factura.vencimientoCae
-      ? new Date(factura.vencimientoCae).toLocaleDateString()
-      : "";
-
-    // Generar código QR para la factura
-    const qrData = `https://www.afip.gob.ar/fe/qr/?p=${Buffer.from(
-      JSON.stringify({
-        ver: 1,
-        fecha: fechaEmision,
-        cuit: process.env.AFIP_CUIT || "20461628312",
-        ptoVta: 1,
-        tipoCmp: tipoComprobante === "A" ? 1 : tipoComprobante === "B" ? 6 : 11,
-        nroCmp: factura.afipComprobante || 0,
-        importe: factura.total,
-        moneda: "PES",
-        ctz: 1,
-        tipoCodAut: "E",
-        codAut: factura.cae,
-      })
-    ).toString("base64")}`;
-
-    const qrDataUrl = await QRCode.toDataURL(qrData);
+    const fechaEmision = new Date(remito.fecha).toLocaleDateString();
 
     // Preparar los datos para el componente
-    const facturaData = {
-      tipoComprobante: tipoComprobante,
-      codigoComprobante: codigoComprobante,
+    const remitoData = {
+      numero: remito.numero,
+      fecha: fechaEmision,
       razonSocial: "FERRESOFT S.A.",
       domicilioComercial: "Av. Siempre Viva 123 - CABA",
-      condicionIVA: "Responsable inscripto",
-      puntoVenta: "00001",
-      compNro: factura.afipComprobante
-        ? String(factura.afipComprobante).padStart(8, "0")
-        : factura.numero,
-      fechaEmision: fechaEmision,
-      cuit: process.env.AFIP_CUIT || "20461628312",
-      ingresosBrutos: "12345432",
-      fechaInicioActividades: "01/01/2023",
-      periodoFacturadoDesde: fechaEmision,
-      periodoFacturadoHasta: fechaEmision,
-      fechaVtoPago: fechaVencimientoCae || fechaEmision,
-      clienteCuit: factura.cliente.cuitDni || "No especificado",
-      clienteNombre: factura.cliente.nombre,
-      clienteCondicionIVA:
-        factura.tipoComprobante === "FACTURA_A"
-          ? "IVA Responsable Inscripto"
-          : "Consumidor Final",
-      clienteDomicilio: factura.cliente.direccion || "No especificado",
-      condicionVenta: "Contado",
-      detalles: factura.detalles.map((detalle) => ({
+      clienteNombre: remito.cliente.nombre,
+      clienteCuit: remito.cliente.cuitDni || "No especificado",
+      clienteDomicilio: remito.cliente.direccion || "No especificado",
+      detalles: remito.detalles.map((detalle) => ({
         codigo: detalle.producto.codigo || "",
         descripcion: detalle.producto.descripcion || "",
         cantidad: detalle.cantidad.toString(),
-        unidadMedida: "UN",
-        precioUnitario: detalle.precioUnitario.toFixed(2),
-        bonificacion: "0.00",
-        subtotal: (detalle.cantidad * detalle.precioUnitario).toFixed(2),
-        alicuotaIVA: "21%",
-        subtotalConIVA: detalle.subtotal.toFixed(2),
       })),
-      importeNetoGravado: (factura.total / 1.21).toFixed(2),
-      importeTotal: factura.total.toFixed(2),
-      qrDataUrl: qrDataUrl,
-      cae: factura.cae || "",
-      fechaVencimientoCae: fechaVencimientoCae,
     };
 
     console.log(`[PDF] Datos preparados, renderizando componente React`);
 
     // Renderizar el componente React a HTML
-    const component = React.createElement(FacturaTemplate, facturaData);
+    const component = React.createElement(RemitoTemplate, remitoData);
     const html = ReactDOMServer.renderToString(component);
 
     // Envolver el HTML en un documento completo
@@ -280,7 +202,7 @@ export default async function handler(
       <html>
         <head>
           <meta charset="UTF-8">
-          <title>Factura ${factura.numero}</title>
+          <title>Remito ${remito.numero}</title>
           <style>
             * {
               box-sizing: border-box;
@@ -293,7 +215,7 @@ export default async function handler(
               margin: 0;
               padding: 0;
             }
-            ${facturaStyles}
+            ${remitoStyles}
           </style>
         </head>
         <body>
@@ -335,14 +257,8 @@ export default async function handler(
 
     console.log(`[PDF] PDF generado, tamaño: ${pdfBuffer.length} bytes`);
 
-    // Determinar si es nota de crédito
-    const isNotaCredito = factura.tipoComprobante.includes("NOTA_CREDITO");
-    const tipoFactura = factura.tipoComprobante.split("_")[1] || ""; // Extrae "A", "B", etc.
-
     // Crear un nombre de archivo para la descarga
-    const filename = isNotaCredito
-      ? `notacredito${tipoFactura.toLowerCase()}-${factura.numero}.pdf`
-      : `factura${tipoFactura.toLowerCase()}-${factura.numero}.pdf`;
+    const filename = `remito-${remito.numero}.pdf`;
 
     // Configurar las cabeceras para descargar el PDF en lugar de visualizarlo
     res.setHeader("Content-Type", "application/pdf");
@@ -355,12 +271,12 @@ export default async function handler(
     // Enviar el PDF directamente como respuesta
     res.status(200).send(pdfBuffer);
   } catch (error) {
-    console.error("Error al generar el PDF de la factura:", error);
+    console.error("Error al generar el PDF del remito:", error);
 
     // Responder con error
     if (!res.headersSent) {
       res.status(500).json({
-        error: "Error al generar el PDF de la factura",
+        error: "Error al generar el PDF del remito",
         message: error instanceof Error ? error.message : String(error),
       });
     }
