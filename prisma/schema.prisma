@@ -283,6 +283,7 @@ model AfipCertificate {
   content     String   @db.Text
   description String?
   type        String // "CERT" or "KEY"
+  environment String? // "DEV" or "PROD"
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

@@ -88,7 +88,7 @@ export default async function handler(
   // POST - Subir un nuevo certificado
   if (req.method === "POST") {
     try {
-      const { name, content, description, type } = req.body;
+      const { name, content, description, type, environment } = req.body;
 
       if (!name || !content || !type) {
         return res.status(400).json({
@@ -102,6 +102,14 @@ export default async function handler(
         return res.status(400).json({
           error: "Tipo de certificado inválido",
           details: "El tipo debe ser 'CERT' o 'KEY'",
+        });
+      }
+
+      // Validar el entorno si está presente
+      if (environment && environment !== "DEV" && environment !== "PROD") {
+        return res.status(400).json({
+          error: "Entorno inválido",
+          details: "El entorno debe ser 'DEV' o 'PROD'",
         });
       }
 
@@ -123,6 +131,7 @@ export default async function handler(
           content,
           description,
           type,
+          environment,
           isActive: true,
         },
       });
@@ -137,16 +146,25 @@ export default async function handler(
   // PUT - Actualizar un certificado existente
   if (req.method === "PUT") {
     try {
-      const { id, isActive, description } = req.body;
+      const { id, isActive, description, environment } = req.body;
 
       if (!id) {
         return res.status(400).json({ error: "Falta el ID del certificado" });
       }
 
-      // Sólo permitimos actualizar isActive y description
+      // Validar el entorno si está presente
+      if (environment && environment !== "DEV" && environment !== "PROD") {
+        return res.status(400).json({
+          error: "Entorno inválido",
+          details: "El entorno debe ser 'DEV' o 'PROD'",
+        });
+      }
+
+      // Permitimos actualizar isActive, description y environment
       const updateData: any = {};
       if (isActive !== undefined) updateData.isActive = isActive;
       if (description !== undefined) updateData.description = description;
+      if (environment !== undefined) updateData.environment = environment;
 
       const certificate = await prisma.afipCertificate.update({
         where: { id: Number(id) },

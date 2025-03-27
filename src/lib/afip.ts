@@ -32,24 +32,63 @@ try {
 // Función para obtener certificados de la base de datos
 const getCertificatesFromDB = async () => {
   try {
-    // Obtener certificado y clave activos
+    // Determinar el entorno actual para filtrar certificados correspondientes
+    const environment = isProduction ? "PROD" : "DEV";
+    console.log(`Obteniendo certificados AFIP para entorno: ${environment}`);
+
+    // Buscar certificados específicos para el entorno actual
     const cert = await prisma.afipCertificate.findFirst({
-      where: { type: "CERT", isActive: true },
+      where: {
+        type: "CERT",
+        isActive: true,
+        environment: environment,
+      },
       orderBy: { createdAt: "desc" },
     });
 
     const key = await prisma.afipCertificate.findFirst({
-      where: { type: "KEY", isActive: true },
+      where: {
+        type: "KEY",
+        isActive: true,
+        environment: environment,
+      },
       orderBy: { createdAt: "desc" },
     });
 
+    // Si no hay certificados específicos para el entorno, intentar con certificados sin entorno específico
     if (!cert || !key) {
-      console.error(
-        "No se encontraron certificados activos en la base de datos"
+      console.warn(
+        `No se encontraron certificados para el entorno ${environment}, buscando certificados genéricos...`
       );
-      throw new Error(
-        "No se encontraron certificados activos en la base de datos"
-      );
+
+      const genericCert = await prisma.afipCertificate.findFirst({
+        where: {
+          type: "CERT",
+          isActive: true,
+          OR: [{ environment: null }, { environment: "" }],
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      const genericKey = await prisma.afipCertificate.findFirst({
+        where: {
+          type: "KEY",
+          isActive: true,
+          OR: [{ environment: null }, { environment: "" }],
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      if (!genericCert || !genericKey) {
+        console.error(
+          "No se encontraron certificados activos en la base de datos"
+        );
+        throw new Error(
+          "No se encontraron certificados activos en la base de datos"
+        );
+      }
+
+      return { cert: genericCert.content, key: genericKey.content };
     }
 
     return { cert: cert.content, key: key.content };
@@ -155,8 +194,36 @@ export const extendAfipSDK = (afip: any) => {
 export async function getAfipInstance() {
   if (!afipInstance) {
     try {
+      console.log("Obteniendo instancia de AFIP...");
       const config = await getAfipConfig();
 
+      // Verificar que tengamos todos los datos necesarios
+      if (!config.CUIT) {
+        console.error("CUIT no configurado en las variables de entorno");
+      } else {
+        console.log(`CUIT configurado: ${config.CUIT}`);
+      }
+
+      // Verificar certificados
+      if (!config.cert) {
+        console.error("Certificado (cert) no encontrado o vacío");
+      } else {
+        const certPreview = config.cert.substring(0, 40) + "...";
+        console.log(`Certificado encontrado: ${certPreview}`);
+      }
+
+      if (!config.key) {
+        console.error("Clave privada (key) no encontrada o vacía");
+      } else {
+        const keyPreview = config.key.substring(0, 40) + "...";
+        console.log(`Clave privada encontrada: ${keyPreview}`);
+      }
+
+      // Registrar información sobre el entorno
+      console.log(`Modo producción: ${config.production}`);
+      console.log(`Carpeta TA: ${config.ta_folder}`);
+
+      // Crear la instancia con la configuración obtenida
       afipInstance = new Afip({
         CUIT: Number(config.CUIT),
         cert: config.cert,
@@ -171,7 +238,30 @@ export async function getAfipInstance() {
 
       console.log("Instancia de AFIP creada exitosamente");
     } catch (error) {
-      console.error("Error al crear instancia de AFIP:", error);
+      console.error(
+        "Error al crear instancia de AFIP:",
+        error instanceof Error ? error.message : String(error)
+      );
+
+      // Mostrar más detalles del error para facilitar la depuración
+      if (error instanceof Error) {
+        console.error("Stack trace:", error.stack);
+
+        // Si hay propiedades adicionales en el error, mostrarlas
+        const errorDetails = {};
+        for (const prop in error) {
+          if (Object.prototype.hasOwnProperty.call(error, prop)) {
+            // @ts-ignore
+            errorDetails[prop] = error[prop];
+          }
+        }
+        if (Object.keys(errorDetails).length > 0) {
+          console.error(
+            "Detalles adicionales del error:",
+            JSON.stringify(errorDetails, null, 2)
+          );
+        }
+      }
 
       // En producción, devolvemos null en lugar de lanzar un error
       if (process.env.NODE_ENV === "production") {
@@ -181,7 +271,11 @@ export async function getAfipInstance() {
         return null;
       }
 
-      throw new Error("Error al crear instancia de AFIP");
+      throw new Error(
+        `Error al crear instancia de AFIP: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
     }
   }
   return afipInstance;
@@ -319,55 +413,90 @@ export const getUltimoComprobante = async (
 // Verificar el estado del servidor de AFIP
 export const verificarConexion = async (): Promise<boolean> => {
   try {
-    // En producción, si hay error al obtener la instancia, devolver false en lugar de lanzar error
-    if (process.env.NODE_ENV === "production") {
-      try {
-        const afip = await getAfipInstance();
-        if (!afip) {
-          console.error("No se pudo obtener la instancia de AFIP");
-          return false;
-        }
+    // Obtener el entorno actual
+    const environment = process.env.NODE_ENV || "development";
+    console.log(`Verificando conexión AFIP en entorno: ${environment}`);
 
-        const status = await afip.ElectronicBilling.getServerStatus();
-        if (!status) {
-          console.error("No se recibió respuesta del servidor de AFIP");
-          return false;
-        }
-
-        return (
-          status.AppServer === "OK" &&
-          status.DbServer === "OK" &&
-          status.AuthServer === "OK"
-        );
-      } catch (error) {
-        console.error(
-          "Error al verificar conexión con AFIP en producción:",
-          error
-        );
-        return false;
-      }
-    } else {
-      // En desarrollo, seguir el comportamiento normal
+    // En cualquier entorno, manejar errores adecuadamente
+    try {
       const afip = await getAfipInstance();
       if (!afip) {
         console.error("No se pudo obtener la instancia de AFIP");
         return false;
       }
 
-      const status = await afip.ElectronicBilling.getServerStatus();
-      if (!status) {
-        console.error("No se recibió respuesta del servidor de AFIP");
+      console.log(
+        "Instancia AFIP obtenida, verificando estado del servidor..."
+      );
+
+      try {
+        // Intentar obtener el estado del servidor con mejor manejo de errores
+        const status = await afip.ElectronicBilling.getServerStatus();
+
+        if (!status) {
+          console.error("No se recibió respuesta del servidor de AFIP");
+          return false;
+        }
+
+        console.log("Respuesta del servidor AFIP:", JSON.stringify(status));
+
+        // Verificar cada componente del estado
+        const appServerOk = status.AppServer === "OK";
+        const dbServerOk = status.DbServer === "OK";
+        const authServerOk = status.AuthServer === "OK";
+
+        console.log(
+          `Estado de los servicios AFIP - AppServer: ${status.AppServer}, DbServer: ${status.DbServer}, AuthServer: ${status.AuthServer}`
+        );
+
+        return appServerOk && dbServerOk && authServerOk;
+      } catch (statusError) {
+        // Capturar específicamente el error al consultar el estado
+        const errorMessage =
+          statusError instanceof Error
+            ? statusError.message
+            : String(statusError);
+        const errorDetails = JSON.stringify(
+          statusError,
+          Object.getOwnPropertyNames(statusError)
+        );
+        console.error(
+          `Error al consultar estado del servidor AFIP: ${errorMessage}`
+        );
+        console.error(`Detalles del error: ${errorDetails}`);
+
+        // Si estamos en modo desarrollo, mostrar más información para depuración
+        if (environment !== "production") {
+          console.log("Intentando obtener información adicional del error...");
+
+          if (statusError instanceof Error && "response" in statusError) {
+            // @ts-ignore - Para acceder a propiedades de error axios/fetch
+            const responseData = statusError.response?.data;
+            if (responseData) {
+              console.error(
+                "Respuesta del servidor:",
+                JSON.stringify(responseData)
+              );
+            }
+          }
+        }
+
         return false;
       }
-
-      return (
-        status.AppServer === "OK" &&
-        status.DbServer === "OK" &&
-        status.AuthServer === "OK"
+    } catch (instanceError) {
+      console.error(
+        `Error al verificar conexión con AFIP en ${environment}:`,
+        instanceError instanceof Error
+          ? instanceError.message
+          : String(instanceError)
       );
+      return false;
     }
   } catch (error) {
-    console.error("Error al verificar conexión con AFIP:", error);
+    console.error(
+      "Error general al verificar conexión con AFIP:",
+      error instanceof Error ? error.message : String(error)
+    );
     return false;
   }
 };
