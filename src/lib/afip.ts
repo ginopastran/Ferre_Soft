@@ -110,7 +110,8 @@ const getAfipConfig = async () => {
       );
     }
 
-    return {
+    // Configurar opciones básicas
+    const config: any = {
       CUIT: process.env.AFIP_CUIT || "20461628312",
       cert: certificates.cert,
       key: certificates.key,
@@ -118,6 +119,20 @@ const getAfipConfig = async () => {
       res_folder: taFolder,
       ta_folder: taFolder,
     };
+
+    // Incluir access_token solo en producción
+    if (isProduction) {
+      if (!process.env.AFIP_ACCESS_TOKEN) {
+        console.warn(
+          "ADVERTENCIA: access_token no encontrado en variables de entorno para entorno de producción"
+        );
+      } else {
+        console.log("Access token de AFIP configurado para producción");
+        config.access_token = process.env.AFIP_ACCESS_TOKEN;
+      }
+    }
+
+    return config;
   } catch (error) {
     console.error("Error en getAfipConfig:", error);
     throw new Error(
@@ -476,6 +491,23 @@ export const verificarConexion = async (): Promise<boolean> => {
               console.error(
                 "Respuesta del servidor:",
                 JSON.stringify(responseData)
+              );
+            }
+          }
+        } else {
+          // Verificar específicamente el error de falta de access_token en producción
+          if (
+            errorMessage.includes("401") ||
+            errorMessage.includes("Unauthorized")
+          ) {
+            console.error(
+              "Error de autorización 401: Es probable que necesite configurar AFIP_ACCESS_TOKEN en las variables de entorno para el entorno de producción."
+            );
+
+            // Verificar si tenemos el token configurado
+            if (!process.env.AFIP_ACCESS_TOKEN) {
+              console.error(
+                "AFIP_ACCESS_TOKEN no está definido en las variables de entorno"
               );
             }
           }
