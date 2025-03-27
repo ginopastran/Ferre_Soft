@@ -234,19 +234,35 @@ export async function getAfipInstance() {
         console.log(`Clave privada encontrada: ${keyPreview}`);
       }
 
+      // Verificar access_token en producción
+      if (isProduction && !config.access_token) {
+        console.error("ERROR: access_token no configurado para producción");
+      } else if (isProduction) {
+        console.log("Access token configurado para producción");
+      }
+
       // Registrar información sobre el entorno
       console.log(`Modo producción: ${config.production}`);
       console.log(`Carpeta TA: ${config.ta_folder}`);
 
       // Crear la instancia con la configuración obtenida
-      afipInstance = new Afip({
+      const afipOptions: any = {
         CUIT: Number(config.CUIT),
         cert: config.cert,
         key: config.key,
         production: config.production,
         res_folder: config.res_folder,
         ta_folder: config.ta_folder,
-      });
+      };
+
+      // Incluir el access_token solo si existe y estamos en producción
+      if (isProduction && config.access_token) {
+        afipOptions.access_token = config.access_token;
+        console.log("Access token incluido en la configuración de AFIP SDK");
+      }
+
+      // Crear la instancia con todas las opciones
+      afipInstance = new Afip(afipOptions);
 
       // Extender el SDK con la función createPDF
       afipInstance = extendAfipSDK(afipInstance);
