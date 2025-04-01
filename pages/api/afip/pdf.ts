@@ -211,7 +211,7 @@ export default async function handler(
         ver: 1,
         fecha: fechaEmision,
         cuit: process.env.AFIP_CUIT || "20461628312",
-        ptoVta: 1,
+        ptoVta: 3,
         tipoCmp: tipoComprobante === "A" ? 1 : tipoComprobante === "B" ? 6 : 11,
         nroCmp: factura.afipComprobante || 0,
         importe: factura.total,
@@ -231,7 +231,7 @@ export default async function handler(
       razonSocial: "FERRESOFT S.A.",
       domicilioComercial: "Av. Siempre Viva 123 - CABA",
       condicionIVA: "Responsable inscripto",
-      puntoVenta: "00001",
+      puntoVenta: "00003",
       compNro: factura.afipComprobante
         ? String(factura.afipComprobante).padStart(8, "0")
         : factura.numero,

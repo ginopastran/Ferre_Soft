@@ -636,7 +636,7 @@ export const generarFacturaElectronica = async (
     }
 
     // Determinar punto de venta (configurable)
-    const puntoVenta = 1; // Por defecto punto de venta 1
+    const puntoVenta = 3; // Punto de venta 3 para facturación electrónica
 
     // Mapear tipo de comprobante
     const tipoComprobante = tipoComprobanteToAfip(factura.tipoComprobante);
