@@ -117,7 +117,7 @@ export default function CatalogoPage() {
               useCORS: true,
               logging: false,
               backgroundColor: "#ffffff",
-            });
+            } as any);
 
             const imgWidth1 = colWidth;
             const imgHeight1 = (canvas1.height * colWidth) / canvas1.width;
@@ -145,7 +145,7 @@ export default function CatalogoPage() {
               useCORS: true,
               logging: false,
               backgroundColor: "#ffffff",
-            });
+            } as any);
 
             const imgWidth2 = colWidth;
             const imgHeight2 = (canvas2.height * colWidth) / canvas2.width;

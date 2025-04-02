@@ -183,12 +183,11 @@ async function generatePdfWithJSPDF(
 
       // Crear un canvas con el contenido HTML renderizado
       const canvas = await html2canvas(body, {
-        // @ts-ignore - Las opciones pueden variar según la versión
         scale: 2, // Alta calidad
         useCORS: true, // Permitir recursos externos
         logging: false, // Evitar logs innecesarios
         allowTaint: true, // Permitir imágenes que pueden "contaminar" el canvas
-      });
+      } as any);
 
       console.log("[PDF] HTML renderizado a canvas correctamente");
 
