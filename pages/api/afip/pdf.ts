@@ -151,8 +151,35 @@ async function generatePdf(html: string, options: any): Promise<Buffer> {
       });
 
       // Buscar datos importantes como el total
-      const importeTotal =
-        document.querySelector("span:-webkit-any(b,strong)")?.textContent || "";
+      let importeTotal = "";
+      // Intentar encontrar el importe total con diferentes selectores
+      const totalElementStrong = document.querySelector("span strong");
+      const totalElementB = document.querySelector("span b");
+      const importeTotalElement = document.querySelector(
+        ".footer span:last-child"
+      );
+
+      if (totalElementStrong) {
+        importeTotal = totalElementStrong.textContent || "";
+      } else if (totalElementB) {
+        importeTotal = totalElementB.textContent || "";
+      } else if (importeTotalElement) {
+        importeTotal = importeTotalElement.textContent || "";
+      } else {
+        // Búsqueda más general por texto que contenga "total"
+        const allSpans = document.querySelectorAll("span");
+        for (let i = 0; i < allSpans.length; i++) {
+          const span = allSpans[i];
+          if (
+            span.textContent &&
+            span.textContent.toLowerCase().includes("total")
+          ) {
+            importeTotal = span.textContent;
+            break;
+          }
+        }
+      }
+
       pdf.setFontSize(12);
       pdf.text(
         "Importe Total: " + importeTotal,
