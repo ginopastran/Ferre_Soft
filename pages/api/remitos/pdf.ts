@@ -143,162 +143,147 @@ async function generatePdfWithJSPDF(
 ): Promise<Buffer> {
   return new Promise<Buffer>(async (resolve, reject) => {
     try {
-      // Importar bibliotecas necesarias
-      const { JSDOM } = await import("jsdom");
-      // Crear un DOM en memoria con el HTML
-      const dom = new JSDOM(html);
-      const document = dom.window.document;
+      console.log("[PDF] Configurando HTML2Canvas + jsPDF para producción");
 
-      // Crear un nuevo documento PDF con jsPDF
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
-        compress: true,
+      // Importar bibliotecas necesarias para renderizar HTML a imagen y luego a PDF
+      const { JSDOM } = await import("jsdom");
+      let html2canvas;
+      let jsPDF;
+
+      try {
+        const html2canvasModule = await import("html2canvas");
+        html2canvas = html2canvasModule.default;
+
+        const jspdfModule = await import("jspdf");
+        jsPDF = jspdfModule.jsPDF;
+
+        console.log("[PDF] Módulos html2canvas y jsPDF cargados correctamente");
+      } catch (importError: any) {
+        console.error("[PDF] Error al cargar módulos:", importError);
+        throw new Error(
+          `Error al cargar módulos necesarios: ${importError.message}`
+        );
+      }
+
+      // Crear un DOM en memoria con el HTML
+      const dom = new JSDOM(html, {
+        resources: "usable", // Permite cargar recursos (CSS, imágenes)
+        runScripts: "dangerously", // Permite ejecutar scripts si hay
+        url: "https://example.org/", // URL base para resolver rutas relativas
       });
+
+      const document = dom.window.document;
+      const body = document.body;
 
       // Configurar las dimensiones
       const pageWidth = 210; // A4 width in mm
       const pageHeight = 297; // A4 height in mm
-      const margin = {
-        top: parseFloat(options.margin?.top || "20") || 20,
-        right: parseFloat(options.margin?.right || "20") || 20,
-        bottom: parseFloat(options.margin?.bottom || "20") || 20,
-        left: parseFloat(options.margin?.left || "20") || 20,
-      };
 
-      // Extraer los datos del documento
-      const title = document.querySelector("title")?.textContent || "Remito";
-      pdf.setProperties({ title });
+      console.log("[PDF] Renderizando HTML a canvas...");
 
-      // Añadir contenido al PDF - método simple dividido en secciones
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(18);
-      pdf.text("REMITO", pageWidth / 2, margin.top, { align: "center" });
-
-      // Datos del remitente
-      pdf.setFontSize(14);
-      const razonSocial =
-        document.querySelector(".wrapper h3")?.textContent || "FERRESOFT S.A.";
-      pdf.text(razonSocial, margin.left, margin.top + 15);
-
-      // Información del remito
-      pdf.setFontSize(12);
-      pdf.text(
-        `Remito N°: ${title.replace("Remito ", "")}`,
-        pageWidth - margin.right,
-        margin.top + 10,
-        { align: "right" }
-      );
-
-      // Fecha
-      const fechaElement =
-        document.querySelector(".wrapper .text-right")?.textContent || "";
-      pdf.text(
-        `Fecha: ${fechaElement.replace("Fecha: ", "")}`,
-        pageWidth - margin.right,
-        margin.top + 15,
-        { align: "right" }
-      );
-
-      // Información del cliente
-      pdf.setFontSize(10);
-      let yPos = margin.top + 30;
-
-      // Cliente info
-      const clienteInfoElements = document.querySelectorAll(
-        ".wrapper .text-left b"
-      );
-      clienteInfoElements.forEach((element, index) => {
-        if (index < 5) {
-          // Limitamos para no sobrecargarlo
-          const label = element.textContent || "";
-          const value = element.nextSibling?.textContent || "";
-          pdf.text(`${label} ${value}`, margin.left, yPos);
-          yPos += 5;
-        }
+      // Crear un canvas con el contenido HTML renderizado
+      const canvas = await html2canvas(body, {
+        // @ts-ignore - Las opciones pueden variar según la versión
+        scale: 2, // Alta calidad
+        useCORS: true, // Permitir recursos externos
+        logging: false, // Evitar logs innecesarios
+        allowTaint: true, // Permitir imágenes que pueden "contaminar" el canvas
       });
 
-      // Tabla de productos
-      yPos += 10;
-      pdf.setFontSize(11);
-      pdf.text("Detalle de productos", margin.left, yPos);
-      yPos += 5;
+      console.log("[PDF] HTML renderizado a canvas correctamente");
 
-      // Encabezados de la tabla
-      const headers = ["Código", "Descripción", "Cantidad"];
-      let columnWidths = [20, pageWidth - margin.left - margin.right - 40, 20];
-
-      // Dibujar encabezados
-      pdf.setFillColor(240, 240, 240);
-      pdf.rect(
-        margin.left,
-        yPos,
-        pageWidth - margin.left - margin.right,
-        8,
-        "F"
-      );
-      pdf.setFont("helvetica", "bold");
-
-      let xPos = margin.left;
-      headers.forEach((header, i) => {
-        pdf.text(header, xPos + 2, yPos + 5);
-        xPos += columnWidths[i];
+      // Crear un nuevo documento PDF con el tamaño correcto
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
       });
 
-      // Filas de productos
-      yPos += 8;
-      pdf.setFont("helvetica", "normal");
+      // Convertir el canvas a una imagen y agregarla al PDF
+      const imgData = canvas.toDataURL("image/jpeg", 1.0);
 
-      // Obtener filas de la tabla
-      const rows = document.querySelectorAll("table tbody tr");
-      rows.forEach((row) => {
-        if (yPos > pageHeight - margin.bottom - 15) {
-          // Nueva página
-          pdf.addPage();
-          yPos = margin.top;
-        }
+      // Ajustar la imagen al tamaño de la página A4
+      pdf.addImage(imgData, "JPEG", 0, 0, pageWidth, pageHeight, "", "FAST");
 
-        const cells = row.querySelectorAll("td");
-        xPos = margin.left;
-
-        // Dibujar celdas
-        for (let i = 0; i < 3; i++) {
-          // Solo las 3 columnas que nos interesan
-          const text = cells[i]?.textContent || "";
-          pdf.text(text.substring(0, 35), xPos + 2, yPos + 5); // Limitar longitud del texto
-          xPos += columnWidths[i];
-        }
-
-        // Línea horizontal
-        pdf.setDrawColor(200, 200, 200);
-        pdf.line(margin.left, yPos + 8, pageWidth - margin.right, yPos + 8);
-
-        yPos += 8;
-      });
-
-      // Pie de página
-      yPos = pageHeight - margin.bottom - 20;
-      pdf.setFont("helvetica", "italic");
-      pdf.setFontSize(8);
-      pdf.text(
-        "Este documento no tiene validez como factura",
-        margin.left,
-        yPos
-      );
-      pdf.text(
-        new Date().toLocaleDateString(),
-        pageWidth - margin.right,
-        yPos,
-        { align: "right" }
-      );
+      console.log("[PDF] PDF generado correctamente con html2canvas");
 
       // Finalizar y obtener el PDF como Buffer
       const pdfOutput = pdf.output("arraybuffer");
       resolve(Buffer.from(pdfOutput));
     } catch (error) {
-      console.error("[PDF] Error al generar PDF con jsPDF:", error);
-      reject(error);
+      console.error(
+        "[PDF] Error al generar PDF con html2canvas + jsPDF:",
+        error
+      );
+
+      // Intento alternativo simplificado
+      try {
+        console.log("[PDF] Intentando método alternativo simplificado");
+
+        // Importaciones necesarias
+        const { jsPDF } = await import("jspdf");
+        const { JSDOM } = await import("jsdom");
+
+        // Crear DOM y renderizar contenido
+        const dom = new JSDOM(html);
+        const document = dom.window.document;
+
+        // Crear PDF
+        const pdf = new jsPDF({
+          orientation: "portrait",
+          unit: "mm",
+          format: "a4",
+        });
+
+        // Extraer el contenido HTML como texto y añadirlo al PDF
+        const content = document.querySelector(".page")?.textContent || "";
+
+        // Dividir el contenido en líneas para una mejor presentación
+        const lines = content.split("\n").filter((line) => line.trim() !== "");
+
+        // Añadir el contenido al PDF con formato básico
+        let y = 20;
+        pdf.setFontSize(12);
+
+        // Título principal
+        pdf.setFont("helvetica", "bold");
+        pdf.text("REMITO", 105, y, { align: "center" });
+        y += 10;
+
+        // Resto del contenido
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(10);
+
+        // Datos comerciales
+        lines.forEach((line) => {
+          if (line.trim()) {
+            // Evitar que se salga de la página
+            if (y > 270) {
+              pdf.addPage();
+              y = 20;
+            }
+
+            // Detectar campos importantes para resaltarlos
+            if (line.includes("CUIT:") || line.includes("Total")) {
+              pdf.setFont("helvetica", "bold");
+            } else {
+              pdf.setFont("helvetica", "normal");
+            }
+
+            pdf.text(line.substring(0, 100), 20, y); // Limitar longitud
+            y += 6;
+          }
+        });
+
+        console.log("[PDF] PDF generado correctamente con método alternativo");
+
+        // Finalizar y obtener el PDF
+        const pdfOutput = pdf.output("arraybuffer");
+        resolve(Buffer.from(pdfOutput));
+      } catch (fallbackError) {
+        console.error("[PDF] Error en método alternativo:", fallbackError);
+        reject(error); // Devolvemos el error original
+      }
     }
   });
 }
@@ -390,6 +375,87 @@ export default async function handler(
               font-size: 13px;
               margin: 0;
               padding: 0;
+            }
+            .page {
+              width: 21cm;
+              min-height: 29.7cm;
+              padding: 2cm;
+              margin: 0;
+              background: white;
+            }
+            .wrapper {
+              border: 1px solid #000;
+              padding: 10px;
+              margin-bottom: 2px;
+              box-sizing: border-box;
+            }
+            .flex {
+              display: flex;
+              flex-wrap: wrap;
+            }
+            .space-between {
+              justify-content: space-between;
+            }
+            .space-around {
+              justify-content: space-around;
+            }
+            .text-center {
+              text-align: center;
+            }
+            .text-left {
+              text-align: left;
+            }
+            .text-right {
+              text-align: right;
+            }
+            .bold {
+              font-weight: bold;
+            }
+            .italic {
+              font-style: italic;
+            }
+            .text-20 {
+              font-size: 20px;
+            }
+            .no-margin {
+              margin: 0;
+            }
+            .inline-block {
+              display: inline-block;
+              vertical-align: top;
+            }
+            .w50 {
+              width: 50%;
+            }
+            .relative {
+              position: relative;
+            }
+            .floating-mid {
+              position: absolute;
+              left: 50%;
+              top: -30px;
+              background: white;
+              border: 1px solid black;
+              padding: 5px 15px;
+              transform: translateX(-50%);
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              font-size: 12px;
+            }
+            table, th, td {
+              border: 1px solid #000;
+            }
+            th, td {
+              padding: 5px;
+            }
+            .small {
+              font-size: 10px;
+            }
+            .footer {
+              page-break-inside: avoid;
+              margin-top: 20px;
             }
             ${getStyles()}
           </style>

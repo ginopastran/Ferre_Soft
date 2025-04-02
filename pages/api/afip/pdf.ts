@@ -146,141 +146,162 @@ async function generatePdfWithJSPDF(
 ): Promise<Buffer> {
   return new Promise<Buffer>(async (resolve, reject) => {
     try {
-      // Importar bibliotecas necesarias
-      const { JSDOM } = await import("jsdom");
-      // Crear un DOM en memoria con el HTML
-      const dom = new JSDOM(html);
-      const document = dom.window.document;
+      console.log("[PDF] Configurando HTML2Canvas + jsPDF para producción");
 
-      // Crear un nuevo documento PDF con jsPDF
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
-        compress: true,
+      // Importar bibliotecas necesarias para renderizar HTML a imagen y luego a PDF
+      const { JSDOM } = await import("jsdom");
+      let html2canvas;
+      let jsPDF;
+
+      try {
+        const html2canvasModule = await import("html2canvas");
+        html2canvas = html2canvasModule.default;
+
+        const jspdfModule = await import("jspdf");
+        jsPDF = jspdfModule.jsPDF;
+
+        console.log("[PDF] Módulos html2canvas y jsPDF cargados correctamente");
+      } catch (importError: any) {
+        console.error("[PDF] Error al cargar módulos:", importError);
+        throw new Error(
+          `Error al cargar módulos necesarios: ${importError.message}`
+        );
+      }
+
+      // Crear un DOM en memoria con el HTML
+      const dom = new JSDOM(html, {
+        resources: "usable", // Permite cargar recursos (CSS, imágenes)
+        runScripts: "dangerously", // Permite ejecutar scripts si hay
+        url: "https://example.org/", // URL base para resolver rutas relativas
       });
+
+      const document = dom.window.document;
+      const body = document.body;
 
       // Configurar las dimensiones
       const pageWidth = 210; // A4 width in mm
       const pageHeight = 297; // A4 height in mm
-      const margin = {
-        top: parseFloat(options.margin?.top || "20") || 20,
-        right: parseFloat(options.margin?.right || "20") || 20,
-        bottom: parseFloat(options.margin?.bottom || "20") || 20,
-        left: parseFloat(options.margin?.left || "20") || 20,
-      };
 
-      // Extraer los datos del documento
-      const title = document.querySelector("title")?.textContent || "Factura";
-      pdf.setProperties({ title });
+      console.log("[PDF] Renderizando HTML a canvas...");
 
-      // Añadir contenido al PDF - método simple dividido en secciones
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(16);
-      pdf.text("ORIGINAL", pageWidth / 2, margin.top, { align: "center" });
-
-      // Información de la empresa
-      pdf.setFontSize(14);
-      pdf.text("FACTURA", pageWidth / 2, margin.top + 10, { align: "center" });
-
-      // Datos básicos de la factura
-      pdf.setFontSize(12);
-
-      // Extraer texto de nodos principales
-      const razonSocial =
-        document.querySelector(".wrapper h3")?.textContent || "";
-      pdf.text(razonSocial, margin.left, margin.top + 20);
-
-      // Cabecera de factura
-      const cabecera =
-        document.querySelector(".floating-mid h3")?.textContent || "";
-      pdf.setFontSize(18);
-      pdf.text(cabecera, pageWidth - margin.right - 10, margin.top + 10, {
-        align: "right",
+      // Crear un canvas con el contenido HTML renderizado
+      const canvas = await html2canvas(body, {
+        // @ts-ignore - Las opciones pueden variar según la versión
+        scale: 2, // Alta calidad
+        useCORS: true, // Permitir recursos externos
+        logging: false, // Evitar logs innecesarios
+        allowTaint: true, // Permitir imágenes que pueden "contaminar" el canvas
       });
 
-      // Información del cliente
-      pdf.setFontSize(10);
-      const clienteInfo = document.querySelectorAll(".wrapper b");
-      let yPos = margin.top + 40;
-      clienteInfo.forEach((node, index) => {
-        if (index < 10) {
-          // Limitar la cantidad de datos que extraemos
-          const text =
-            node.textContent + ": " + (node.nextSibling?.textContent || "");
-          pdf.text(text, margin.left, yPos);
-          yPos += 5;
-        }
+      console.log("[PDF] HTML renderizado a canvas correctamente");
+
+      // Crear un nuevo documento PDF con el tamaño correcto
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
       });
 
-      // Buscar datos importantes como el total
-      let importeTotal = "";
-      // Intentar encontrar el importe total con diferentes selectores
-      const totalElementStrong = document.querySelector("span strong");
-      const totalElementB = document.querySelector("span b");
-      const importeTotalElement = document.querySelector(
-        ".footer span:last-child"
-      );
+      // Convertir el canvas a una imagen y agregarla al PDF
+      const imgData = canvas.toDataURL("image/jpeg", 1.0);
 
-      if (totalElementStrong) {
-        importeTotal = totalElementStrong.textContent || "";
-      } else if (totalElementB) {
-        importeTotal = totalElementB.textContent || "";
-      } else if (importeTotalElement) {
-        importeTotal = importeTotalElement.textContent || "";
-      } else {
-        // Búsqueda más general por texto que contenga "total"
-        const allSpans = document.querySelectorAll("span");
-        for (let i = 0; i < allSpans.length; i++) {
-          const span = allSpans[i];
-          if (
-            span.textContent &&
-            span.textContent.toLowerCase().includes("total")
-          ) {
-            importeTotal = span.textContent;
-            break;
-          }
-        }
-      }
+      // Ajustar la imagen al tamaño de la página A4
+      pdf.addImage(imgData, "JPEG", 0, 0, pageWidth, pageHeight, "", "FAST");
 
-      pdf.setFontSize(12);
-      pdf.text(
-        "Importe Total: " + importeTotal,
-        pageWidth - margin.right,
-        yPos + 60,
-        { align: "right" }
-      );
-
-      // Añadir el código QR si está disponible
-      const qrImage = document.querySelector("img[src^='data:image/']");
-      if (qrImage && qrImage.getAttribute("src")) {
-        pdf.addImage(
-          qrImage.getAttribute("src") || "",
-          "PNG",
-          margin.left,
-          pageHeight - margin.bottom - 30,
-          30,
-          30
-        );
-      }
-
-      // Añadir información del CAE
-      const caeInfo =
-        document.querySelector(".footer")?.textContent?.trim() || "";
-      pdf.setFontSize(9);
-      pdf.text(
-        "CAE: " + caeInfo.substring(0, 40),
-        pageWidth - margin.right,
-        pageHeight - margin.bottom - 10,
-        { align: "right" }
-      );
+      console.log("[PDF] PDF generado correctamente con html2canvas");
 
       // Finalizar y obtener el PDF como Buffer
       const pdfOutput = pdf.output("arraybuffer");
       resolve(Buffer.from(pdfOutput));
     } catch (error) {
-      console.error("[PDF] Error al generar PDF con jsPDF:", error);
-      reject(error);
+      console.error(
+        "[PDF] Error al generar PDF con html2canvas + jsPDF:",
+        error
+      );
+
+      // Intento alternativo simplificado
+      try {
+        console.log("[PDF] Intentando método alternativo simplificado");
+
+        // Importaciones necesarias
+        const { jsPDF } = await import("jspdf");
+        const { JSDOM } = await import("jsdom");
+
+        // Crear DOM y renderizar contenido
+        const dom = new JSDOM(html);
+        const document = dom.window.document;
+
+        // Crear PDF
+        const pdf = new jsPDF({
+          orientation: "portrait",
+          unit: "mm",
+          format: "a4",
+        });
+
+        // Extraer el contenido HTML como texto y añadirlo al PDF
+        const content = document.querySelector(".page")?.textContent || "";
+
+        // Dividir el contenido en líneas para una mejor presentación
+        const lines = content.split("\n").filter((line) => line.trim() !== "");
+
+        // Añadir el contenido al PDF con formato básico
+        let y = 20;
+        pdf.setFontSize(12);
+
+        // Título principal
+        pdf.setFont("helvetica", "bold");
+        pdf.text("ORIGINAL", 105, y, { align: "center" });
+        y += 20;
+
+        // Tipo de factura
+        pdf.setFontSize(18);
+        pdf.text("FACTURA", 105, y, { align: "center" });
+        y += 10;
+
+        // Tipo de letra A/B/C
+        pdf.text(
+          document.querySelector(".floating-mid h3")?.textContent || "A",
+          180,
+          30,
+          {
+            align: "right",
+          }
+        );
+
+        // Resto del contenido
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(10);
+
+        // Datos comerciales
+        lines.forEach((line) => {
+          if (line.trim()) {
+            // Evitar que se salga de la página
+            if (y > 270) {
+              pdf.addPage();
+              y = 20;
+            }
+
+            // Detectar campos importantes para resaltarlos
+            if (line.includes("CUIT:") || line.includes("Total")) {
+              pdf.setFont("helvetica", "bold");
+            } else {
+              pdf.setFont("helvetica", "normal");
+            }
+
+            pdf.text(line.substring(0, 100), 20, y); // Limitar longitud
+            y += 6;
+          }
+        });
+
+        console.log("[PDF] PDF generado correctamente con método alternativo");
+
+        // Finalizar y obtener el PDF
+        const pdfOutput = pdf.output("arraybuffer");
+        resolve(Buffer.from(pdfOutput));
+      } catch (fallbackError) {
+        console.error("[PDF] Error en método alternativo:", fallbackError);
+        reject(error); // Devolvemos el error original
+      }
     }
   });
 }
@@ -435,15 +456,107 @@ export default async function handler(
       <html>
         <head>
           <meta charset="UTF-8">
-          <title>Factura ${factura.numero}</title>
+          <title>Factura ${facturaData.compNro}</title>
           <style>
-            * {box-sizing: border-box; font-family: Arial, sans-serif;}
-            body {width: 21cm; min-height: 29.7cm; font-size: 13px; margin: 0; padding: 0;}
+            * {
+              box-sizing: border-box;
+              font-family: Arial, sans-serif;
+            }
+            body {
+              width: 21cm;
+              min-height: 29.7cm;
+              font-size: 13px;
+              margin: 0;
+              padding: 0;
+            }
+            .page {
+              width: 21cm;
+              min-height: 29.7cm;
+              padding: 2cm;
+              margin: 0;
+              background: white;
+            }
+            .wrapper {
+              border: 1px solid #000;
+              padding: 10px;
+              margin-bottom: 2px;
+              box-sizing: border-box;
+            }
+            .flex {
+              display: flex;
+              flex-wrap: wrap;
+            }
+            .space-between {
+              justify-content: space-between;
+            }
+            .space-around {
+              justify-content: space-around;
+            }
+            .text-center {
+              text-align: center;
+            }
+            .text-left {
+              text-align: left;
+            }
+            .text-right {
+              text-align: right;
+            }
+            .bold {
+              font-weight: bold;
+            }
+            .italic {
+              font-style: italic;
+            }
+            .text-20 {
+              font-size: 20px;
+            }
+            .no-margin {
+              margin: 0;
+            }
+            .inline-block {
+              display: inline-block;
+              vertical-align: top;
+            }
+            .w50 {
+              width: 50%;
+            }
+            .relative {
+              position: relative;
+            }
+            .floating-mid {
+              position: absolute;
+              left: 50%;
+              top: -30px;
+              background: white;
+              border: 1px solid black;
+              padding: 5px 15px;
+              transform: translateX(-50%);
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              font-size: 12px;
+            }
+            table, th, td {
+              border: 1px solid #000;
+            }
+            th, td {
+              padding: 5px;
+            }
+            .small {
+              font-size: 10px;
+            }
+            .footer {
+              page-break-inside: avoid;
+              margin-top: 20px;
+            }
             ${facturaStyles}
           </style>
         </head>
         <body>
-          <div class="page">${html}</div>
+          <div class="page">
+            ${html}
+          </div>
         </body>
       </html>
     `;
