@@ -170,7 +170,7 @@ export const FacturaTemplate: React.FC<FacturaTemplateProps> = ({
         </div>
       </div>
 
-      <table style={{ marginTop: "5px" }}>
+      <table style={{ marginTop: "5px" }} className="compact-table">
         <thead>
           <tr>
             <th className="text-left">Código</th>
@@ -201,11 +201,16 @@ export const FacturaTemplate: React.FC<FacturaTemplateProps> = ({
         </tbody>
       </table>
 
-      <div className="footer" style={{ marginTop: "300px" }}>
+      <div
+        className="footer no-page-break"
+        style={{ marginTop: detalles.length <= 3 ? "40px" : "140px" }}
+      >
         <div className="flex wrapper space-between">
           <div style={{ width: "55%" }}>
-            <p className="bold">Otros tributos</p>
-            <table>
+            <p className="bold" style={{ marginTop: "0", marginBottom: "5px" }}>
+              Otros tributos
+            </p>
+            <table className="compact-table">
               <thead>
                 <tr>
                   <th>Descripción</th>

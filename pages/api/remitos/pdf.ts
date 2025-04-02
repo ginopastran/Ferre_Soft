@@ -180,18 +180,23 @@ async function generatePdfWithJSPDF(
 
         console.log("[PDF] Cargando HTML en la página");
 
-        // Cargar el HTML en la página
+        // Configurar timeouts más largos para asegurar carga completa
+        await page.setDefaultNavigationTimeout(60000);
+        await page.setDefaultTimeout(60000);
+
+        // Cargar el HTML en la página con opciones mejoradas
         await page.setContent(html, {
           waitUntil: "networkidle0",
-          timeout: 30000,
+          timeout: 60000,
         });
 
         console.log("[PDF] HTML cargado, generando PDF");
 
-        // Generar el PDF
+        // Generar el PDF con opciones optimizadas
         const pdfBuffer = await page.pdf({
           format: "a4",
           printBackground: true,
+          preferCSSPageSize: true,
           margin: {
             top: "0mm",
             right: "0mm",
@@ -320,13 +325,13 @@ export default async function handler(
             .page {
               width: 21cm;
               min-height: 29.7cm;
-              padding: 2cm;
+              padding: 1.5cm;
               margin: 0;
               background: white;
             }
             .wrapper {
               border: 1px solid #000;
-              padding: 10px;
+              padding: 8px;
               margin-bottom: 2px;
               box-sizing: border-box;
             }
@@ -374,29 +379,35 @@ export default async function handler(
             .floating-mid {
               position: absolute;
               left: 50%;
-              top: -30px;
+              top: -25px;
               background: white;
               border: 1px solid black;
-              padding: 5px 15px;
+              padding: 4px 12px;
               transform: translateX(-50%);
             }
             table {
               width: 100%;
               border-collapse: collapse;
-              font-size: 12px;
+              font-size: 11px;
             }
             table, th, td {
               border: 1px solid #000;
             }
             th, td {
-              padding: 5px;
+              padding: 4px;
             }
             .small {
-              font-size: 10px;
+              font-size: 9px;
             }
             .footer {
               page-break-inside: avoid;
-              margin-top: 20px;
+              margin-top: 15px;
+            }
+            .compact-table tr td, .compact-table tr th {
+              padding: 3px;
+            }
+            .no-page-break {
+              page-break-inside: avoid;
             }
             ${getStyles()}
           </style>
