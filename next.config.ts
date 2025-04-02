@@ -27,7 +27,7 @@ const config = {
   ],
 };
 
-const nextConfig = withPWA(config)({
+const baseConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -49,6 +49,25 @@ const nextConfig = withPWA(config)({
       ],
     },
   ],
-});
+  // Configuración específica para entorno serverless y chrome-aws-lambda
+  webpack: (
+    config: any,
+    { dev, isServer }: { dev: boolean; isServer: boolean }
+  ) => {
+    // Configuración para chrome-aws-lambda en entorno de producción
+    if (isServer && !dev) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        // Evitar conflictos con módulos nativos
+        fs: false,
+        child_process: false,
+      };
+    }
+
+    return config;
+  },
+};
+
+const nextConfig = withPWA(config)(baseConfig);
 
 export default nextConfig;

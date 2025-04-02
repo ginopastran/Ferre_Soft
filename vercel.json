@@ -13,5 +13,15 @@
         }
       ]
     }
-  ]
+  ],
+  "functions": {
+    "pages/api/afip/pdf.ts": {
+      "memory": 2048,
+      "maxDuration": 60
+    },
+    "pages/api/remitos/pdf.ts": {
+      "memory": 2048,
+      "maxDuration": 60
+    }
+  }
 }

@@ -186,6 +186,15 @@ async function generatePdf(html: string, options: any): Promise<Buffer> {
 
   // En producción, usamos chrome-aws-lambda y puppeteer-core
   console.log("[PDF] Generando PDF con chrome-aws-lambda (producción)");
+
+  // Importar las dependencias de manera sincrónica para asegurar que están disponibles
+  try {
+    if (!chromium) chromium = require("chrome-aws-lambda");
+    if (!puppeteer) puppeteer = require("puppeteer-core");
+  } catch (error) {
+    console.error("[PDF] Error al importar dependencias:", error);
+  }
+
   if (!chromium || !puppeteer) {
     throw new Error(
       "No se pudieron cargar las dependencias para generar PDF en producción"
@@ -194,12 +203,18 @@ async function generatePdf(html: string, options: any): Promise<Buffer> {
 
   let browser = null;
   try {
-    // Inicializar el navegador
+    // Inicializar el navegador con configuración para entorno serverless
     console.log("[PDF] Iniciando navegador para generar PDF");
     browser = await puppeteer.launch({
-      args: chromium.args,
-      executablePath: await chromium.executablePath,
-      headless: true,
+      args: [
+        ...chromium.args,
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+      ],
+      executablePath: process.env.CHROME_BIN || (await chromium.executablePath),
+      headless: chromium.headless,
+      ignoreHTTPSErrors: true,
     });
 
     // Crear una nueva página
