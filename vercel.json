@@ -17,11 +17,15 @@
   "functions": {
     "pages/api/afip/pdf.ts": {
       "memory": 1024,
-      "maxDuration": 60
+      "maxDuration": 60,
+      "includeFiles": "node_modules/@sparticuz/chromium/**",
+      "excludeFiles": ""
     },
     "pages/api/remitos/pdf.ts": {
       "memory": 1024,
-      "maxDuration": 60
+      "maxDuration": 60,
+      "includeFiles": "node_modules/@sparticuz/chromium/**",
+      "excludeFiles": ""
     }
   },
   "build": {

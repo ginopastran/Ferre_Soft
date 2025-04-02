@@ -150,25 +150,25 @@ async function generatePdfWithJSPDF(
     try {
       console.log("[PDF] Configurando Puppeteer para la generación de PDF");
 
-      // Importar Puppeteer
-      const chromium = (await import("@sparticuz/chromium-min")).default;
+      // Importamos los módulos necesarios
+      const chromium = (await import("@sparticuz/chromium")).default;
       const puppeteer = (await import("puppeteer-core")).default;
 
-      let browser;
+      let browser = null;
+
       try {
+        // Inicializar el navegador con Puppeteer
         browser = await puppeteer.launch({
-          args: [
-            ...chromium.args,
-            "--hide-scrollbars",
-            "--disable-web-security",
-            "--no-sandbox",
-          ],
+          args: chromium.args,
           defaultViewport: chromium.defaultViewport,
           executablePath: await chromium.executablePath(),
           headless: true,
           ignoreHTTPSErrors: true,
         });
 
+        console.log("[PDF] Navegador iniciado correctamente");
+
+        // Crear una nueva página
         const page = await browser.newPage();
 
         // Configurar la página para tamaño A4
@@ -178,15 +178,19 @@ async function generatePdfWithJSPDF(
           deviceScaleFactor: 2, // Para mejor calidad
         });
 
-        // Establecer el HTML en la página
+        console.log("[PDF] Cargando HTML en la página");
+
+        // Cargar el HTML en la página
         await page.setContent(html, {
-          waitUntil: "networkidle0", // Esperar a que no haya solicitudes de red
-          timeout: 30000, // 30 segundos máximo
+          waitUntil: "networkidle0",
+          timeout: 30000,
         });
 
-        // Generar PDF
+        console.log("[PDF] HTML cargado, generando PDF");
+
+        // Generar el PDF
         const pdfBuffer = await page.pdf({
-          format: "a4", // Usando 'a4' en minúsculas para cumplir con PaperFormat
+          format: "a4",
           printBackground: true,
           margin: {
             top: "0mm",
@@ -198,11 +202,16 @@ async function generatePdfWithJSPDF(
 
         console.log("[PDF] PDF generado correctamente con Puppeteer");
 
-        await browser.close();
+        // Cerrar el navegador
+        if (browser) {
+          await browser.close();
+        }
+
         resolve(pdfBuffer);
       } catch (error) {
         console.error("[PDF] Error al generar PDF con Puppeteer:", error);
 
+        // Asegurarse de cerrar el navegador en caso de error
         if (browser) {
           try {
             await browser.close();
