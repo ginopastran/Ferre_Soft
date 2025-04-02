@@ -16,11 +16,11 @@
   ],
   "functions": {
     "pages/api/afip/pdf.ts": {
-      "memory": 2048,
+      "memory": 1024,
       "maxDuration": 60
     },
     "pages/api/remitos/pdf.ts": {
-      "memory": 2048,
+      "memory": 1024,
       "maxDuration": 60
     }
   }

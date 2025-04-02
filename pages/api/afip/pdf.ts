@@ -54,127 +54,48 @@ if (process.env.NODE_ENV === "production") {
   }
 }
 
-// Leer los estilos CSS
-let facturaStyles: string;
-try {
-  facturaStyles = fs.readFileSync(
-    path.join(process.cwd(), "styles/factura.css"),
-    "utf8"
-  );
-} catch (error) {
-  console.warn("No se pudo cargar el archivo CSS, usando estilos por defecto");
-  facturaStyles = `
-    .wrapper {
-      border: 1px solid #000;
-      padding: 10px;
-      margin-bottom: 2px;
-      box-sizing: border-box;
-    }
-    
-    .flex {
-      display: flex;
-      flex-wrap: wrap;
-    }
-    
-    .space-between {
-      justify-content: space-between;
-    }
-    
-    .space-around {
-      justify-content: space-around;
-    }
-    
-    .text-center {
-      text-align: center;
-    }
-    
-    .text-left {
-      text-align: left;
-    }
-    
-    .text-right {
-      text-align: right;
-    }
-    
-    .bold {
-      font-weight: bold;
-    }
-    
-    .italic {
-      font-style: italic;
-    }
-    
-    .text-20 {
-      font-size: 20px;
-    }
-    
-    .no-margin {
-      margin: 0;
-    }
-    
-    .inline-block {
-      display: inline-block;
-      vertical-align: top;
-    }
-    
-    .w50 {
-      width: 50%;
-    }
-    
-    .relative {
-      position: relative;
-    }
-    
-    .floating-mid {
-      position: absolute;
-      left: 45%;
-      top: -30px;
-      background: white;
-      border: 1px solid black;
-      padding: 5px 15px;
-      transform: translateX(-50%);
-    }
-    
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 12px;
-    }
-    
-    table, th, td {
-      border: 1px solid #000;
-    }
-    
-    th, td {
-      padding: 5px;
-    }
-    
-    .small {
-      font-size: 10px;
-    }
-    
-    .footer {
-      page-break-inside: avoid;
-      margin-top: 20px;
-    }
-    
-    @page {
-      size: A4;
-      margin: 0;
-    }
-    
-    body {
-      margin: 10mm;
-      padding: 0;
-      font-family: Arial, sans-serif;
-    }
-  `;
-}
+// Cargar estilos CSS de manera optimizada
+const getStyles = () => {
+  try {
+    return fs.readFileSync(
+      path.join(process.cwd(), "styles/factura.css"),
+      "utf8"
+    );
+  } catch (error) {
+    console.warn(
+      "No se pudo cargar el archivo CSS, usando estilos por defecto"
+    );
+    return `
+      .wrapper { border: 1px solid #000; padding: 10px; margin-bottom: 2px; box-sizing: border-box; }
+      .flex { display: flex; flex-wrap: wrap; }
+      .space-between { justify-content: space-between; }
+      .space-around { justify-content: space-around; }
+      .text-center { text-align: center; }
+      .text-left { text-align: left; }
+      .text-right { text-align: right; }
+      .bold { font-weight: bold; }
+      .italic { font-style: italic; }
+      .text-20 { font-size: 20px; }
+      .no-margin { margin: 0; }
+      .inline-block { display: inline-block; vertical-align: top; }
+      .w50 { width: 50%; }
+      .relative { position: relative; }
+      .floating-mid { position: absolute; left: 45%; top: -30px; background: white; border: 1px solid black; padding: 5px 15px; transform: translateX(-50%); }
+      table { width: 100%; border-collapse: collapse; font-size: 12px; }
+      table, th, td { border: 1px solid #000; }
+      th, td { padding: 5px; }
+      .small { font-size: 10px; }
+      .footer { page-break-inside: avoid; margin-top: 20px; }
+      @page { size: A4; margin: 0; }
+      body { margin: 10mm; padding: 0; font-family: Arial, sans-serif; }
+    `;
+  }
+};
 
 // Timeout para evitar que se quede cargando indefinidamente
 const TIMEOUT_MS = 30000; // 30 segundos
 
-// Función para generar un PDF, con diferente implementación según el entorno
+// Función para generar un PDF con optimización de memoria
 async function generatePdf(html: string, options: any): Promise<Buffer> {
   // En entorno de desarrollo, usamos html-pdf-node
   if (process.env.NODE_ENV !== "production") {
@@ -187,52 +108,72 @@ async function generatePdf(html: string, options: any): Promise<Buffer> {
     });
   }
 
-  // En producción, usamos chrome-aws-lambda y puppeteer-core
+  // En producción, importamos y usamos chrome-aws-lambda bajo demanda para optimizar memoria
   console.log("[PDF] Generando PDF con chrome-aws-lambda (producción)");
 
-  // Importar las dependencias de manera sincrónica para asegurar que están disponibles
-  try {
-    if (!chromium) chromium = require("chrome-aws-lambda");
-    if (!puppeteer) puppeteer = require("puppeteer-core");
-  } catch (error) {
-    console.error("[PDF] Error al importar dependencias:", error);
-  }
+  // Importación dinámica para ahorrar memoria
+  const chromium = await import("chrome-aws-lambda").catch((err) => {
+    console.error("[PDF] Error al importar chrome-aws-lambda:", err);
+    throw new Error("No se pudo cargar chrome-aws-lambda");
+  });
 
-  if (!chromium || !puppeteer) {
-    throw new Error(
-      "No se pudieron cargar las dependencias para generar PDF en producción"
-    );
-  }
+  const puppeteer = await import("puppeteer-core").catch((err) => {
+    console.error("[PDF] Error al importar puppeteer-core:", err);
+    throw new Error("No se pudo cargar puppeteer-core");
+  });
 
   let browser = null;
   try {
-    // Inicializar el navegador con configuración para entorno serverless
-    console.log("[PDF] Iniciando navegador para generar PDF");
-    browser = await puppeteer.launch({
+    // Configuración optimizada para entorno serverless con límite de memoria
+    console.log("[PDF] Iniciando navegador con configuración optimizada");
+    browser = await puppeteer.default.launch({
       args: [
-        ...chromium.args,
+        ...chromium.default.args,
         "--no-sandbox",
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--disable-extensions",
+        "--disable-audio-output",
+        "--single-process", // Reduce el uso de memoria
+        "--mute-audio",
       ],
-      executablePath: process.env.CHROME_BIN || (await chromium.executablePath),
-      headless: chromium.headless,
+      defaultViewport: { width: 794, height: 1123, deviceScaleFactor: 1 },
+      executablePath:
+        process.env.CHROME_BIN || (await chromium.default.executablePath),
+      headless: chromium.default.headless,
       ignoreHTTPSErrors: true,
     });
 
-    // Crear una nueva página
+    // Crear una página con configuración optimizada
     const page = await browser.newPage();
 
-    // Configurar el tiempo de espera
+    // Limitar las peticiones para ahorrar memoria
+    await page.setRequestInterception(true);
+    page.on("request", (request) => {
+      if (
+        ["image", "stylesheet", "font", "script"].includes(
+          request.resourceType()
+        )
+      ) {
+        // Bloquear recursos que no son necesarios para el PDF
+        if (request.resourceType() !== "stylesheet") {
+          request.abort();
+        } else {
+          request.continue();
+        }
+      } else {
+        request.continue();
+      }
+    });
+
+    // Configurar el tiempo de espera y memoria
     await page.setDefaultNavigationTimeout(TIMEOUT_MS);
 
-    // Establecer el contenido HTML
-    await page.setContent(html, { waitUntil: "networkidle0" });
+    // Establecer el contenido HTML de manera optimizada
+    await page.setContent(html, { waitUntil: "domcontentloaded" });
 
-    // Configurar el tamaño de la página (A4)
-    await page.setViewport({ width: 794, height: 1123 });
-
-    // Generar el PDF
+    // Generar el PDF con configuración para ahorrar memoria
     const pdfBuffer = await page.pdf({
       format: "a4",
       printBackground: true,
@@ -242,6 +183,7 @@ async function generatePdf(html: string, options: any): Promise<Buffer> {
         bottom: "20px",
         left: "20px",
       },
+      preferCSSPageSize: true,
     });
 
     return pdfBuffer;
@@ -249,7 +191,7 @@ async function generatePdf(html: string, options: any): Promise<Buffer> {
     console.error("[PDF] Error al generar PDF con puppeteer:", error);
     throw error;
   } finally {
-    // Cerrar el navegador para liberar recursos
+    // Cerrar el navegador para liberar recursos inmediatamente
     if (browser) {
       await browser.close();
     }
@@ -393,11 +335,14 @@ export default async function handler(
 
     console.log(`[PDF] Datos preparados, renderizando componente React`);
 
+    // Cargar estilos (optimizado)
+    const facturaStyles = getStyles();
+
     // Renderizar el componente React a HTML
     const component = React.createElement(FacturaTemplate, facturaData);
     const html = ReactDOMServer.renderToString(component);
 
-    // Envolver el HTML en un documento completo
+    // Envolver el HTML en un documento simplificado para menor uso de memoria
     const fullHtml = `
       <!DOCTYPE html>
       <html>
@@ -405,31 +350,20 @@ export default async function handler(
           <meta charset="UTF-8">
           <title>Factura ${factura.numero}</title>
           <style>
-            * {
-              box-sizing: border-box;
-              font-family: Arial, sans-serif;
-            }
-            body {
-              width: 21cm;
-              min-height: 29.7cm;
-              font-size: 13px;
-              margin: 0;
-              padding: 0;
-            }
+            * {box-sizing: border-box; font-family: Arial, sans-serif;}
+            body {width: 21cm; min-height: 29.7cm; font-size: 13px; margin: 0; padding: 0;}
             ${facturaStyles}
           </style>
         </head>
         <body>
-          <div class="page">
-            ${html}
-          </div>
+          <div class="page">${html}</div>
         </body>
       </html>
     `;
 
-    console.log(`[PDF] HTML generado, creando PDF`);
+    console.log(`[PDF] HTML generado, creando PDF con menor uso de memoria`);
 
-    // Preparar opciones para la generación del PDF
+    // Preparar opciones para la generación del PDF (optimizado)
     const options = {
       format: "a4",
       margin: { top: "20px", right: "20px", bottom: "20px", left: "20px" },
@@ -437,20 +371,8 @@ export default async function handler(
       timeout: TIMEOUT_MS,
     };
 
-    // Crear una promesa para la generación del PDF
-    const pdfPromise = generatePdf(fullHtml, options);
-
-    // Race entre la generación del PDF y el timeout
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => {
-        reject(new Error(`Timeout después de ${TIMEOUT_MS}ms`));
-      }, TIMEOUT_MS);
-    });
-
-    const pdfBuffer = (await Promise.race([
-      pdfPromise,
-      timeoutPromise,
-    ])) as Buffer;
+    // Generar el PDF directamente con manejo de errores apropiado
+    const pdfBuffer = await generatePdf(fullHtml, options);
 
     console.log(`[PDF] PDF generado, tamaño: ${pdfBuffer.length} bytes`);
 
@@ -468,8 +390,6 @@ export default async function handler(
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     res.setHeader("Content-Length", pdfBuffer.length);
     res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-    res.setHeader("Pragma", "no-cache");
-    res.setHeader("Expires", "0");
 
     // Enviar el PDF directamente como respuesta
     res.status(200).send(pdfBuffer);
