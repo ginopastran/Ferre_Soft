@@ -65,7 +65,7 @@ const getStyles = () => {
 // Timeout para evitar que se quede cargando indefinidamente
 const TIMEOUT_MS = 30000; // 30 segundos
 
-// Función para generar un PDF utilizando jsPDF en lugar de puppeteer
+// Función para generar un PDF utilizando las diferentes estrategias según el entorno
 async function generatePdf(html: string, options: any): Promise<Buffer> {
   // En entorno de desarrollo, usamos html-pdf-node
   if (process.env.NODE_ENV !== "production") {
@@ -100,13 +100,16 @@ async function generatePdf(html: string, options: any): Promise<Buffer> {
                   "[PDF] Error interno al generar PDF con html-pdf-node:",
                   innerErr
                 );
-                reject(innerErr);
+                console.log(
+                  "[PDF] Usando Puppeteer como fallback en desarrollo"
+                );
+                generatePdfWithJSPDF(html, options).then(resolve).catch(reject);
               });
           } catch (moduleErr) {
             console.error("[PDF] Error al recargar html-pdf-node:", moduleErr);
 
-            // Fallback a jsPDF en desarrollo
-            console.log("[PDF] Usando jsPDF como fallback en desarrollo");
+            // Fallback a Puppeteer en desarrollo
+            console.log("[PDF] Usando Puppeteer como fallback en desarrollo");
             generatePdfWithJSPDF(html, options).then(resolve).catch(reject);
           }
         } else {
@@ -121,7 +124,8 @@ async function generatePdf(html: string, options: any): Promise<Buffer> {
                 "[PDF] Error al generar PDF con html-pdf-node:",
                 err
               );
-              reject(err);
+              console.log("[PDF] Usando Puppeteer como fallback en desarrollo");
+              generatePdfWithJSPDF(html, options).then(resolve).catch(reject);
             });
         }
       } catch (outerErr) {
@@ -129,79 +133,91 @@ async function generatePdf(html: string, options: any): Promise<Buffer> {
           "[PDF] Error general en generación de PDF en desarrollo:",
           outerErr
         );
-        reject(outerErr);
+        console.log("[PDF] Usando Puppeteer como última opción");
+        generatePdfWithJSPDF(html, options).then(resolve).catch(reject);
       }
     });
   }
 
-  // En producción, usamos jsPDF directamente
-  console.log("[PDF] Generando PDF con jsPDF (producción)");
+  // En producción, usamos Puppeteer directamente
+  console.log("[PDF] Generando PDF con Puppeteer (producción)");
   return generatePdfWithJSPDF(html, options);
 }
 
-// Función auxiliar para generar PDF con jsPDF
+// Función auxiliar para generar PDF con Puppeteer
 async function generatePdfWithJSPDF(
   html: string,
   options: any
 ): Promise<Buffer> {
   return new Promise<Buffer>(async (resolve, reject) => {
     try {
-      console.log("[PDF] Configurando HTML2Canvas + jsPDF para producción");
+      console.log("[PDF] Configurando Puppeteer para la generación de PDF");
 
-      // Importar bibliotecas necesarias
-      const { JSDOM } = await import("jsdom");
-      const html2canvasModule = await import("html2canvas");
-      const html2canvas = html2canvasModule.default;
+      // Importar Puppeteer
+      const chromium = (await import("@sparticuz/chromium-min")).default;
+      const puppeteer = (await import("puppeteer-core")).default;
 
-      // Crear un DOM virtual con el HTML
-      const dom = new JSDOM(html);
-      const document = dom.window.document;
-
-      // Asegurarse de que los estilos se apliquen correctamente
-      document.documentElement.style.width = "210mm";
-      document.documentElement.style.height = "297mm";
-      document.body.style.width = "210mm";
-      document.body.style.height = "297mm";
-      document.body.style.margin = "0";
-      document.body.style.padding = "0";
-
-      // Configurar las dimensiones del PDF (A4)
-      const pageWidth = 210; // A4 width in mm
-      const pageHeight = 297; // A4 height in mm
-
-      // Crear el PDF con configuración específica
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
-        compress: true,
-      });
-
+      let browser;
       try {
-        // Renderizar el contenido a canvas con alta calidad
-        const canvas = await html2canvas(document.body, {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          allowTaint: true,
-          backgroundColor: "#ffffff",
-          windowWidth: 794, // A4 width in pixels at 96 DPI
-          windowHeight: 1123, // A4 height in pixels at 96 DPI
-        } as any);
+        browser = await puppeteer.launch({
+          args: [
+            ...chromium.args,
+            "--hide-scrollbars",
+            "--disable-web-security",
+            "--no-sandbox",
+          ],
+          defaultViewport: chromium.defaultViewport,
+          executablePath: await chromium.executablePath(),
+          headless: true,
+          ignoreHTTPSErrors: true,
+        });
 
-        // Convertir el canvas a imagen y añadirlo al PDF
-        const imgData = canvas.toDataURL("image/jpeg", 1.0);
-        pdf.addImage(imgData, "JPEG", 0, 0, pageWidth, pageHeight, "", "FAST");
+        const page = await browser.newPage();
 
-        // Obtener el PDF como buffer
-        const pdfOutput = pdf.output("arraybuffer");
-        resolve(Buffer.from(pdfOutput));
+        // Configurar la página para tamaño A4
+        await page.setViewport({
+          width: 794, // A4 a 96dpi
+          height: 1123,
+          deviceScaleFactor: 2, // Para mejor calidad
+        });
+
+        // Establecer el HTML en la página
+        await page.setContent(html, {
+          waitUntil: "networkidle0", // Esperar a que no haya solicitudes de red
+          timeout: 30000, // 30 segundos máximo
+        });
+
+        // Generar PDF
+        const pdfBuffer = await page.pdf({
+          format: "a4", // Usando 'a4' en minúsculas para cumplir con PaperFormat
+          printBackground: true,
+          margin: {
+            top: "0mm",
+            right: "0mm",
+            bottom: "0mm",
+            left: "0mm",
+          },
+        });
+
+        console.log("[PDF] PDF generado correctamente con Puppeteer");
+
+        await browser.close();
+        resolve(pdfBuffer);
       } catch (error) {
-        console.error("[PDF] Error en la generación principal:", error);
+        console.error("[PDF] Error al generar PDF con Puppeteer:", error);
+
+        if (browser) {
+          try {
+            await browser.close();
+          } catch (closeError) {
+            console.error("[PDF] Error al cerrar el navegador:", closeError);
+          }
+        }
+
         reject(error);
       }
     } catch (error) {
-      console.error("[PDF] Error en la configuración:", error);
+      console.error("[PDF] Error en la configuración de Puppeteer:", error);
       reject(error);
     }
   });
