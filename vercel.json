@@ -1,6 +1,6 @@
 {
   "buildCommand": "npm run build",
-  "installCommand": "bash ./scripts/install-chrome-deps.sh && npm install",
+  "installCommand": "bash ./scripts/install-chrome-deps.sh && npm install --legacy-peer-deps",
   "headers": [
     {
       "source": "/sw.js",
