@@ -24,7 +24,6 @@
       "maxDuration": 60
     }
   },
-  "regions": ["dub1", "iad1"],
   "build": {
     "env": {
       "NODE_ENV": "production"
