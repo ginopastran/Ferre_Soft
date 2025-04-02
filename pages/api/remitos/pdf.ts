@@ -5,6 +5,8 @@ import path from "path";
 import React from "react";
 import ReactDOMServer from "react-dom/server";
 import { RemitoTemplate } from "../../../components/RemitoTemplate";
+// @ts-ignore
+import { jsPDF } from "jspdf";
 
 // Importaciones condicionales según el entorno
 let htmlPdf: any = null;
@@ -16,38 +18,6 @@ if (process.env.NODE_ENV !== "production") {
     htmlPdf = require("html-pdf-node");
   } catch (error) {
     console.error("Error al cargar html-pdf-node:", error);
-  }
-}
-
-// En producción, intentamos usar chrome-aws-lambda, pero lo hacemos de manera dinámica
-// para evitar errores en entorno local
-let chromium: any = null;
-let puppeteer: any = null;
-
-// Solo cargar chrome-aws-lambda en producción
-if (process.env.NODE_ENV === "production") {
-  try {
-    // Importaciones dinámicas para entorno de producción
-    import("chrome-aws-lambda")
-      .then((module) => {
-        chromium = module.default;
-      })
-      .catch((err) => {
-        console.error("Error al cargar chrome-aws-lambda:", err);
-      });
-
-    import("puppeteer-core")
-      .then((module) => {
-        puppeteer = module.default;
-      })
-      .catch((err) => {
-        console.error("Error al cargar puppeteer-core:", err);
-      });
-  } catch (error) {
-    console.error(
-      "Error al intentar importar dependencias de producción:",
-      error
-    );
   }
 }
 
@@ -92,47 +62,11 @@ const getStyles = () => {
 // Timeout para evitar que se quede cargando indefinidamente
 const TIMEOUT_MS = 30000; // 30 segundos
 
-// Función para generar un PDF con optimización de memoria
+// Función para generar un PDF utilizando jsPDF en lugar de puppeteer
 async function generatePdf(html: string, options: any): Promise<Buffer> {
-  // Verificar si estamos en Vercel usando el archivo de configuración
-  const isVercel =
-    process.env.VERCEL === "1" || fs.existsSync("./.vercel-deployment");
-  console.log(
-    `[Remito PDF] ¿Estamos en entorno Vercel? ${isVercel ? "Sí" : "No"}`
-  );
-
-  // Si estamos en Vercel, usamos directamente html-pdf-node
-  if (isVercel) {
-    console.log("[Remito PDF] Generando PDF con html-pdf-node en Vercel");
-    try {
-      // Usar require directamente en Vercel
-      const htmlPdfNode = require("html-pdf-node");
-      return new Promise<Buffer>((resolve, reject) => {
-        htmlPdfNode
-          .generatePdf({ content: html }, options)
-          .then((buffer: Buffer) => {
-            console.log(
-              "[Remito PDF] PDF generado con html-pdf-node correctamente"
-            );
-            resolve(buffer);
-          })
-          .catch((err: any) => {
-            console.error(
-              "[Remito PDF] Error al generar PDF con html-pdf-node:",
-              err
-            );
-            reject(err);
-          });
-      });
-    } catch (error) {
-      console.error("[Remito PDF] Error al cargar html-pdf-node:", error);
-      throw error;
-    }
-  }
-
-  // En entorno de desarrollo, usamos html-pdf-node directamente
+  // En entorno de desarrollo, usamos html-pdf-node
   if (process.env.NODE_ENV !== "production") {
-    console.log("[Remito PDF] Generando PDF con html-pdf-node (desarrollo)");
+    console.log("[PDF] Generando PDF con html-pdf-node (desarrollo)");
     return new Promise<Buffer>((resolve, reject) => {
       htmlPdf
         .generatePdf({ content: html }, options)
@@ -141,119 +75,169 @@ async function generatePdf(html: string, options: any): Promise<Buffer> {
     });
   }
 
-  // En producción (pero no Vercel), usamos chrome-aws-lambda
-  console.log("[Remito PDF] Generando PDF con chrome-aws-lambda (producción)");
+  // En producción, usamos jsPDF directamente
+  console.log("[PDF] Generando PDF con jsPDF (producción)");
 
-  try {
-    // Importación dinámica para ahorrar memoria
-    const chromium = await import("chrome-aws-lambda").catch((err) => {
-      console.error("[Remito PDF] Error al importar chrome-aws-lambda:", err);
-      throw new Error("No se pudo cargar chrome-aws-lambda");
-    });
-
-    const puppeteer = await import("puppeteer-core").catch((err) => {
-      console.error("[Remito PDF] Error al importar puppeteer-core:", err);
-      throw new Error("No se pudo cargar puppeteer-core");
-    });
-
-    let browser = null;
+  return new Promise<Buffer>(async (resolve, reject) => {
     try {
-      // Configuración optimizada para entorno serverless con límite de memoria
-      console.log(
-        "[Remito PDF] Iniciando navegador con configuración optimizada"
-      );
+      // Importar bibliotecas necesarias
+      const { JSDOM } = await import("jsdom");
+      // Crear un DOM en memoria con el HTML
+      const dom = new JSDOM(html);
+      const document = dom.window.document;
 
-      // Opciones para Chrome
-      const args = [
-        ...chromium.default.args,
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-        "--disable-extensions",
-        "--disable-audio-output",
-        "--single-process",
-        "--mute-audio",
-      ];
-
-      browser = await puppeteer.default.launch({
-        args,
-        defaultViewport: { width: 794, height: 1123, deviceScaleFactor: 1 },
-        executablePath:
-          process.env.CHROME_BIN || (await chromium.default.executablePath),
-        headless: chromium.default.headless,
-        ignoreHTTPSErrors: true,
+      // Crear un nuevo documento PDF con jsPDF
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+        compress: true,
       });
 
-      // Crear una página con configuración optimizada
-      const page = await browser.newPage();
+      // Configurar las dimensiones
+      const pageWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const margin = {
+        top: parseFloat(options.margin?.top || "20") || 20,
+        right: parseFloat(options.margin?.right || "20") || 20,
+        bottom: parseFloat(options.margin?.bottom || "20") || 20,
+        left: parseFloat(options.margin?.left || "20") || 20,
+      };
 
-      // Limitar las peticiones para ahorrar memoria
-      await page.setRequestInterception(true);
-      page.on("request", (request) => {
-        if (
-          ["image", "stylesheet", "font", "script"].includes(
-            request.resourceType()
-          )
-        ) {
-          // Bloquear recursos que no son necesarios para el PDF
-          if (request.resourceType() !== "stylesheet") {
-            request.abort();
-          } else {
-            request.continue();
-          }
-        } else {
-          request.continue();
+      // Extraer los datos del documento
+      const title = document.querySelector("title")?.textContent || "Remito";
+      pdf.setProperties({ title });
+
+      // Añadir contenido al PDF - método simple dividido en secciones
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(18);
+      pdf.text("REMITO", pageWidth / 2, margin.top, { align: "center" });
+
+      // Datos del remitente
+      pdf.setFontSize(14);
+      const razonSocial =
+        document.querySelector(".wrapper h3")?.textContent || "FERRESOFT S.A.";
+      pdf.text(razonSocial, margin.left, margin.top + 15);
+
+      // Información del remito
+      pdf.setFontSize(12);
+      pdf.text(
+        `Remito N°: ${title.replace("Remito ", "")}`,
+        pageWidth - margin.right,
+        margin.top + 10,
+        { align: "right" }
+      );
+
+      // Fecha
+      const fechaElement =
+        document.querySelector(".wrapper .text-right")?.textContent || "";
+      pdf.text(
+        `Fecha: ${fechaElement.replace("Fecha: ", "")}`,
+        pageWidth - margin.right,
+        margin.top + 15,
+        { align: "right" }
+      );
+
+      // Información del cliente
+      pdf.setFontSize(10);
+      let yPos = margin.top + 30;
+
+      // Cliente info
+      const clienteInfoElements = document.querySelectorAll(
+        ".wrapper .text-left b"
+      );
+      clienteInfoElements.forEach((element, index) => {
+        if (index < 5) {
+          // Limitamos para no sobrecargarlo
+          const label = element.textContent || "";
+          const value = element.nextSibling?.textContent || "";
+          pdf.text(`${label} ${value}`, margin.left, yPos);
+          yPos += 5;
         }
       });
 
-      // Configurar el tiempo de espera
-      await page.setDefaultNavigationTimeout(30000); // 30 segundos
+      // Tabla de productos
+      yPos += 10;
+      pdf.setFontSize(11);
+      pdf.text("Detalle de productos", margin.left, yPos);
+      yPos += 5;
 
-      // Establecer el contenido HTML
-      await page.setContent(html, { waitUntil: "domcontentloaded" });
+      // Encabezados de la tabla
+      const headers = ["Código", "Descripción", "Cantidad"];
+      let columnWidths = [20, pageWidth - margin.left - margin.right - 40, 20];
 
-      // Generar el PDF
-      const pdfBuffer = await page.pdf({
-        format: "a4",
-        printBackground: true,
-        margin: {
-          top: "20px",
-          right: "20px",
-          bottom: "20px",
-          left: "20px",
-        },
-        preferCSSPageSize: true,
-      });
-
-      return pdfBuffer;
-    } catch (error) {
-      console.error("[Remito PDF] Error al generar PDF con puppeteer:", error);
-
-      // Como último recurso, intentamos con html-pdf-node
-      console.log(
-        "[Remito PDF] Intentando con alternativa html-pdf-node como último recurso"
+      // Dibujar encabezados
+      pdf.setFillColor(240, 240, 240);
+      pdf.rect(
+        margin.left,
+        yPos,
+        pageWidth - margin.left - margin.right,
+        8,
+        "F"
       );
-      const htmlPdfNode = require("html-pdf-node");
-      return new Promise<Buffer>((resolve, reject) => {
-        htmlPdfNode
-          .generatePdf({ content: html }, options)
-          .then((buffer: Buffer) => resolve(buffer))
-          .catch((fallbackError: any) => {
-            console.error("[Remito PDF] Error con alternativa:", fallbackError);
-            reject(fallbackError);
-          });
+      pdf.setFont("helvetica", "bold");
+
+      let xPos = margin.left;
+      headers.forEach((header, i) => {
+        pdf.text(header, xPos + 2, yPos + 5);
+        xPos += columnWidths[i];
       });
-    } finally {
-      // Cerrar el navegador para liberar recursos inmediatamente
-      if (browser) {
-        await browser.close();
-      }
+
+      // Filas de productos
+      yPos += 8;
+      pdf.setFont("helvetica", "normal");
+
+      // Obtener filas de la tabla
+      const rows = document.querySelectorAll("table tbody tr");
+      rows.forEach((row) => {
+        if (yPos > pageHeight - margin.bottom - 15) {
+          // Nueva página
+          pdf.addPage();
+          yPos = margin.top;
+        }
+
+        const cells = row.querySelectorAll("td");
+        xPos = margin.left;
+
+        // Dibujar celdas
+        for (let i = 0; i < 3; i++) {
+          // Solo las 3 columnas que nos interesan
+          const text = cells[i]?.textContent || "";
+          pdf.text(text.substring(0, 35), xPos + 2, yPos + 5); // Limitar longitud del texto
+          xPos += columnWidths[i];
+        }
+
+        // Línea horizontal
+        pdf.setDrawColor(200, 200, 200);
+        pdf.line(margin.left, yPos + 8, pageWidth - margin.right, yPos + 8);
+
+        yPos += 8;
+      });
+
+      // Pie de página
+      yPos = pageHeight - margin.bottom - 20;
+      pdf.setFont("helvetica", "italic");
+      pdf.setFontSize(8);
+      pdf.text(
+        "Este documento no tiene validez como factura",
+        margin.left,
+        yPos
+      );
+      pdf.text(
+        new Date().toLocaleDateString(),
+        pageWidth - margin.right,
+        yPos,
+        { align: "right" }
+      );
+
+      // Finalizar y obtener el PDF como Buffer
+      const pdfOutput = pdf.output("arraybuffer");
+      resolve(Buffer.from(pdfOutput));
+    } catch (error) {
+      console.error("[PDF] Error al generar PDF con jsPDF:", error);
+      reject(error);
     }
-  } catch (error) {
-    console.error("[Remito PDF] Error fatal al generar PDF:", error);
-    throw error;
-  }
+  });
 }
 
 export default async function handler(
