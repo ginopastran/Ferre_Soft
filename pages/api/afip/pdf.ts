@@ -97,7 +97,36 @@ const TIMEOUT_MS = 30000; // 30 segundos
 
 // Función para generar un PDF con optimización de memoria
 async function generatePdf(html: string, options: any): Promise<Buffer> {
-  // En entorno de desarrollo, usamos html-pdf-node
+  // Verificar si estamos en Vercel usando el archivo de configuración
+  const isVercel =
+    process.env.VERCEL === "1" || fs.existsSync("./.vercel-deployment");
+  console.log(`[PDF] ¿Estamos en entorno Vercel? ${isVercel ? "Sí" : "No"}`);
+
+  // Si estamos en Vercel, usamos directamente html-pdf-node
+  if (isVercel) {
+    console.log("[PDF] Generando PDF con html-pdf-node en Vercel");
+    try {
+      // Usar require directamente en Vercel
+      const htmlPdfNode = require("html-pdf-node");
+      return new Promise<Buffer>((resolve, reject) => {
+        htmlPdfNode
+          .generatePdf({ content: html }, options)
+          .then((buffer: Buffer) => {
+            console.log("[PDF] PDF generado con html-pdf-node correctamente");
+            resolve(buffer);
+          })
+          .catch((err: any) => {
+            console.error("[PDF] Error al generar PDF con html-pdf-node:", err);
+            reject(err);
+          });
+      });
+    } catch (error) {
+      console.error("[PDF] Error al cargar html-pdf-node:", error);
+      throw error;
+    }
+  }
+
+  // En entorno de desarrollo, usamos html-pdf-node directamente
   if (process.env.NODE_ENV !== "production") {
     console.log("[PDF] Generando PDF con html-pdf-node (desarrollo)");
     return new Promise<Buffer>((resolve, reject) => {
@@ -108,14 +137,10 @@ async function generatePdf(html: string, options: any): Promise<Buffer> {
     });
   }
 
-  // En producción, importamos y usamos chrome-aws-lambda bajo demanda para optimizar memoria
+  // En producción (pero no Vercel), usamos chrome-aws-lambda
   console.log("[PDF] Generando PDF con chrome-aws-lambda (producción)");
 
   try {
-    // Comprobar si estamos en Vercel (donde puede faltar libnss3)
-    const isVercel = process.env.VERCEL === "1";
-    console.log(`[PDF] ¿Estamos en Vercel? ${isVercel ? "Sí" : "No"}`);
-
     // Importación dinámica para ahorrar memoria
     const chromium = await import("chrome-aws-lambda").catch((err) => {
       console.error("[PDF] Error al importar chrome-aws-lambda:", err);
@@ -144,10 +169,6 @@ async function generatePdf(html: string, options: any): Promise<Buffer> {
         "--single-process", // Reduce el uso de memoria
         "--mute-audio",
       ];
-
-      if (isVercel) {
-        args.push("--no-zygote", "--disable-software-rasterizer");
-      }
 
       browser = await puppeteer.default.launch({
         args,
@@ -203,26 +224,23 @@ async function generatePdf(html: string, options: any): Promise<Buffer> {
     } catch (error) {
       console.error("[PDF] Error al generar PDF con puppeteer:", error);
 
-      // Si estamos en Vercel y hay un error, intentar con una alternativa
-      if (isVercel) {
-        console.log("[PDF] Intentando con alternativa html-pdf-node en Vercel");
-        // Importar html-pdf-node como alternativa
-        const htmlPdfNode = require("html-pdf-node");
-        return new Promise<Buffer>((resolve, reject) => {
-          htmlPdfNode
-            .generatePdf({ content: html }, options)
-            .then((buffer: Buffer) => resolve(buffer))
-            .catch((fallbackError: any) => {
-              console.error(
-                "[PDF] Error con alternativa en Vercel:",
-                fallbackError
-              );
-              reject(fallbackError);
-            });
-        });
-      }
-
-      throw error;
+      // Como último recurso, intentamos con html-pdf-node
+      console.log(
+        "[PDF] Intentando con alternativa html-pdf-node como último recurso"
+      );
+      const htmlPdfNode = require("html-pdf-node");
+      return new Promise<Buffer>((resolve, reject) => {
+        htmlPdfNode
+          .generatePdf({ content: html }, options)
+          .then((buffer: Buffer) => resolve(buffer))
+          .catch((fallbackError: any) => {
+            console.error(
+              "[PDF] Error con alternativa en Vercel:",
+              fallbackError
+            );
+            reject(fallbackError);
+          });
+      });
     } finally {
       // Cerrar el navegador para liberar recursos inmediatamente
       if (browser) {

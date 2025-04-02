@@ -1,22 +1,19 @@
 #!/bin/bash
-# Script para instalar dependencias mínimas de Chrome en Vercel
+# Script para configurar el entorno en Vercel sin comandos apt-get
 
-# Configurar variables de entorno para saltar la instalación de Chrome
-echo "Configurando variables para Puppeteer y Chrome"
+# Configurar variables de entorno para que puppeteer use alternativas
+echo "Configurando variables para Puppeteer"
 export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-export PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+export SKIP_CHROMIUM_DOWNLOAD=true
+export PUPPETEER_EXECUTABLE_PATH=/tmp/chromium-binary
 
-# Verificar si estamos en Vercel
-if [ -n "$VERCEL" ]; then
-  echo "Ejecutando en Vercel, configurando alternativas"
-  # Crear archivo de configuración para que puppeteer use html-pdf-node como alternativa
-  mkdir -p ./.config
-  echo '{"chrome": {"useAlternative": true}}' > ./.config/chrome-config.json
-fi
+# Crear directorio para configuración
+echo "Creando archivos de configuración..."
+mkdir -p ./.config
+echo '{"pdf": {"useHtmlPdfNode": true}}' > ./.config/app-config.json
 
-# Si falla la instalación de dependencias nativas, continuamos de todas formas
-set +e
-apt-get update && apt-get install -y libnss3 || true
+# Crear archivo flag para indicar que estamos en Vercel
+touch ./.vercel-deployment
 
 echo "Configuración completada exitosamente"
 exit 0 
