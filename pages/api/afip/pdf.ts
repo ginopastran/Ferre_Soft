@@ -148,159 +148,61 @@ async function generatePdfWithJSPDF(
     try {
       console.log("[PDF] Configurando HTML2Canvas + jsPDF para producción");
 
-      // Importar bibliotecas necesarias para renderizar HTML a imagen y luego a PDF
+      // Importar bibliotecas necesarias
       const { JSDOM } = await import("jsdom");
-      let html2canvas;
-      let jsPDF;
+      const html2canvasModule = await import("html2canvas");
+      const html2canvas = html2canvasModule.default;
 
-      try {
-        const html2canvasModule = await import("html2canvas");
-        html2canvas = html2canvasModule.default;
-
-        const jspdfModule = await import("jspdf");
-        jsPDF = jspdfModule.jsPDF;
-
-        console.log("[PDF] Módulos html2canvas y jsPDF cargados correctamente");
-      } catch (importError: any) {
-        console.error("[PDF] Error al cargar módulos:", importError);
-        throw new Error(
-          `Error al cargar módulos necesarios: ${importError.message}`
-        );
-      }
-
-      // Crear un DOM en memoria con el HTML
-      const dom = new JSDOM(html, {
-        resources: "usable", // Permite cargar recursos (CSS, imágenes)
-        runScripts: "dangerously", // Permite ejecutar scripts si hay
-        url: "https://example.org/", // URL base para resolver rutas relativas
-      });
-
+      // Crear un DOM virtual con el HTML
+      const dom = new JSDOM(html);
       const document = dom.window.document;
-      const body = document.body;
 
-      // Configurar las dimensiones
+      // Asegurarse de que los estilos se apliquen correctamente
+      document.documentElement.style.width = "210mm";
+      document.documentElement.style.height = "297mm";
+      document.body.style.width = "210mm";
+      document.body.style.height = "297mm";
+      document.body.style.margin = "0";
+      document.body.style.padding = "0";
+
+      // Configurar las dimensiones del PDF (A4)
       const pageWidth = 210; // A4 width in mm
       const pageHeight = 297; // A4 height in mm
 
-      console.log("[PDF] Renderizando HTML a canvas...");
-
-      // Crear un canvas con el contenido HTML renderizado
-      const canvas = await html2canvas(body, {
-        scale: 2, // Alta calidad
-        useCORS: true, // Permitir recursos externos
-        logging: false, // Evitar logs innecesarios
-        allowTaint: true, // Permitir imágenes que pueden "contaminar" el canvas
-      } as any);
-
-      console.log("[PDF] HTML renderizado a canvas correctamente");
-
-      // Crear un nuevo documento PDF con el tamaño correcto
+      // Crear el PDF con configuración específica
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "mm",
         format: "a4",
+        compress: true,
       });
 
-      // Convertir el canvas a una imagen y agregarla al PDF
-      const imgData = canvas.toDataURL("image/jpeg", 1.0);
-
-      // Ajustar la imagen al tamaño de la página A4
-      pdf.addImage(imgData, "JPEG", 0, 0, pageWidth, pageHeight, "", "FAST");
-
-      console.log("[PDF] PDF generado correctamente con html2canvas");
-
-      // Finalizar y obtener el PDF como Buffer
-      const pdfOutput = pdf.output("arraybuffer");
-      resolve(Buffer.from(pdfOutput));
-    } catch (error) {
-      console.error(
-        "[PDF] Error al generar PDF con html2canvas + jsPDF:",
-        error
-      );
-
-      // Intento alternativo simplificado
       try {
-        console.log("[PDF] Intentando método alternativo simplificado");
+        // Renderizar el contenido a canvas con alta calidad
+        const canvas = await html2canvas(document.body, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          allowTaint: true,
+          backgroundColor: "#ffffff",
+          windowWidth: 794, // A4 width in pixels at 96 DPI
+          windowHeight: 1123, // A4 height in pixels at 96 DPI
+        } as any);
 
-        // Importaciones necesarias
-        const { jsPDF } = await import("jspdf");
-        const { JSDOM } = await import("jsdom");
+        // Convertir el canvas a imagen y añadirlo al PDF
+        const imgData = canvas.toDataURL("image/jpeg", 1.0);
+        pdf.addImage(imgData, "JPEG", 0, 0, pageWidth, pageHeight, "", "FAST");
 
-        // Crear DOM y renderizar contenido
-        const dom = new JSDOM(html);
-        const document = dom.window.document;
-
-        // Crear PDF
-        const pdf = new jsPDF({
-          orientation: "portrait",
-          unit: "mm",
-          format: "a4",
-        });
-
-        // Extraer el contenido HTML como texto y añadirlo al PDF
-        const content = document.querySelector(".page")?.textContent || "";
-
-        // Dividir el contenido en líneas para una mejor presentación
-        const lines = content.split("\n").filter((line) => line.trim() !== "");
-
-        // Añadir el contenido al PDF con formato básico
-        let y = 20;
-        pdf.setFontSize(12);
-
-        // Título principal
-        pdf.setFont("helvetica", "bold");
-        pdf.text("ORIGINAL", 105, y, { align: "center" });
-        y += 20;
-
-        // Tipo de factura
-        pdf.setFontSize(18);
-        pdf.text("FACTURA", 105, y, { align: "center" });
-        y += 10;
-
-        // Tipo de letra A/B/C
-        pdf.text(
-          document.querySelector(".floating-mid h3")?.textContent || "A",
-          180,
-          30,
-          {
-            align: "right",
-          }
-        );
-
-        // Resto del contenido
-        pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(10);
-
-        // Datos comerciales
-        lines.forEach((line) => {
-          if (line.trim()) {
-            // Evitar que se salga de la página
-            if (y > 270) {
-              pdf.addPage();
-              y = 20;
-            }
-
-            // Detectar campos importantes para resaltarlos
-            if (line.includes("CUIT:") || line.includes("Total")) {
-              pdf.setFont("helvetica", "bold");
-            } else {
-              pdf.setFont("helvetica", "normal");
-            }
-
-            pdf.text(line.substring(0, 100), 20, y); // Limitar longitud
-            y += 6;
-          }
-        });
-
-        console.log("[PDF] PDF generado correctamente con método alternativo");
-
-        // Finalizar y obtener el PDF
+        // Obtener el PDF como buffer
         const pdfOutput = pdf.output("arraybuffer");
         resolve(Buffer.from(pdfOutput));
-      } catch (fallbackError) {
-        console.error("[PDF] Error en método alternativo:", fallbackError);
-        reject(error); // Devolvemos el error original
+      } catch (error) {
+        console.error("[PDF] Error en la generación principal:", error);
+        reject(error);
       }
+    } catch (error) {
+      console.error("[PDF] Error en la configuración:", error);
+      reject(error);
     }
   });
 }
