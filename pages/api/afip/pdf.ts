@@ -2,11 +2,57 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "@/lib/prisma";
 import fs from "fs";
 import path from "path";
+// @ts-ignore
 import QRCode from "qrcode";
 import React from "react";
 import ReactDOMServer from "react-dom/server";
 import { FacturaTemplate } from "../../../components/FacturaTemplate";
-import htmlPdf from "html-pdf-node";
+import { DateTime } from "luxon";
+
+// Importaciones condicionales según el entorno
+let htmlPdf: any = null;
+
+// En desarrollo, cargamos html-pdf-node directamente
+if (process.env.NODE_ENV !== "production") {
+  try {
+    // @ts-ignore
+    htmlPdf = require("html-pdf-node");
+  } catch (error) {
+    console.error("Error al cargar html-pdf-node:", error);
+  }
+}
+
+// En producción, intentamos usar chrome-aws-lambda, pero lo hacemos de manera dinámica
+// para evitar errores en entorno local
+let chromium: any = null;
+let puppeteer: any = null;
+
+// Solo cargar chrome-aws-lambda en producción
+if (process.env.NODE_ENV === "production") {
+  try {
+    // Importaciones dinámicas para entorno de producción
+    import("chrome-aws-lambda")
+      .then((module) => {
+        chromium = module.default;
+      })
+      .catch((err) => {
+        console.error("Error al cargar chrome-aws-lambda:", err);
+      });
+
+    import("puppeteer-core")
+      .then((module) => {
+        puppeteer = module.default;
+      })
+      .catch((err) => {
+        console.error("Error al cargar puppeteer-core:", err);
+      });
+  } catch (error) {
+    console.error(
+      "Error al intentar importar dependencias de producción:",
+      error
+    );
+  }
+}
 
 // Leer los estilos CSS
 let facturaStyles: string;
@@ -128,6 +174,73 @@ try {
 // Timeout para evitar que se quede cargando indefinidamente
 const TIMEOUT_MS = 30000; // 30 segundos
 
+// Función para generar un PDF, con diferente implementación según el entorno
+async function generatePdf(html: string, options: any): Promise<Buffer> {
+  // En entorno de desarrollo, usamos html-pdf-node
+  if (process.env.NODE_ENV !== "production") {
+    console.log("[PDF] Generando PDF con html-pdf-node (desarrollo)");
+    return new Promise<Buffer>((resolve, reject) => {
+      htmlPdf
+        .generatePdf({ content: html }, options)
+        .then((buffer: Buffer) => resolve(buffer))
+        .catch((err: any) => reject(err));
+    });
+  }
+
+  // En producción, usamos chrome-aws-lambda y puppeteer-core
+  console.log("[PDF] Generando PDF con chrome-aws-lambda (producción)");
+  if (!chromium || !puppeteer) {
+    throw new Error(
+      "No se pudieron cargar las dependencias para generar PDF en producción"
+    );
+  }
+
+  let browser = null;
+  try {
+    // Inicializar el navegador
+    console.log("[PDF] Iniciando navegador para generar PDF");
+    browser = await puppeteer.launch({
+      args: chromium.args,
+      executablePath: await chromium.executablePath,
+      headless: true,
+    });
+
+    // Crear una nueva página
+    const page = await browser.newPage();
+
+    // Configurar el tiempo de espera
+    await page.setDefaultNavigationTimeout(TIMEOUT_MS);
+
+    // Establecer el contenido HTML
+    await page.setContent(html, { waitUntil: "networkidle0" });
+
+    // Configurar el tamaño de la página (A4)
+    await page.setViewport({ width: 794, height: 1123 });
+
+    // Generar el PDF
+    const pdfBuffer = await page.pdf({
+      format: "a4",
+      printBackground: true,
+      margin: {
+        top: "20px",
+        right: "20px",
+        bottom: "20px",
+        left: "20px",
+      },
+    });
+
+    return pdfBuffer;
+  } catch (error) {
+    console.error("[PDF] Error al generar PDF con puppeteer:", error);
+    throw error;
+  } finally {
+    // Cerrar el navegador para liberar recursos
+    if (browser) {
+      await browser.close();
+    }
+  }
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -135,11 +248,6 @@ export default async function handler(
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Método no permitido" });
   }
-
-  // Configurar un timeout para evitar que se quede cargando indefinidamente
-  const timeoutPromise = new Promise<Buffer>((_, reject) => {
-    setTimeout(() => reject(new Error("Timeout generando PDF")), TIMEOUT_MS);
-  });
 
   try {
     const { facturaId } = req.query;
@@ -306,28 +414,24 @@ export default async function handler(
 
     console.log(`[PDF] HTML generado, creando PDF`);
 
-    // Configuración para html-pdf-node
+    // Preparar opciones para la generación del PDF
     const options = {
-      format: "A4",
+      format: "a4",
+      margin: { top: "20px", right: "20px", bottom: "20px", left: "20px" },
       printBackground: true,
-      margin: {
-        top: "20px",
-        right: "20px",
-        bottom: "20px",
-        left: "20px",
-      },
       timeout: TIMEOUT_MS,
     };
 
     // Crear una promesa para la generación del PDF
-    const pdfPromise = new Promise<Buffer>((resolve, reject) => {
-      htmlPdf
-        .generatePdf({ content: fullHtml }, options)
-        .then((buffer) => resolve(buffer))
-        .catch((err) => reject(err));
-    });
+    const pdfPromise = generatePdf(fullHtml, options);
 
     // Race entre la generación del PDF y el timeout
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(`Timeout después de ${TIMEOUT_MS}ms`));
+      }, TIMEOUT_MS);
+    });
+
     const pdfBuffer = (await Promise.race([
       pdfPromise,
       timeoutPromise,
