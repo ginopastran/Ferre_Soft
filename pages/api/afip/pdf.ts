@@ -71,16 +71,79 @@ async function generatePdf(html: string, options: any): Promise<Buffer> {
   if (process.env.NODE_ENV !== "production") {
     console.log("[PDF] Generando PDF con html-pdf-node (desarrollo)");
     return new Promise<Buffer>((resolve, reject) => {
-      htmlPdf
-        .generatePdf({ content: html }, options)
-        .then((buffer: Buffer) => resolve(buffer))
-        .catch((err: any) => reject(err));
+      try {
+        if (!htmlPdf || !htmlPdf.generatePdf) {
+          console.error(
+            "[PDF] Error: html-pdf-node no está cargado correctamente",
+            { htmlPdf }
+          );
+
+          // Intentar cargar de nuevo
+          try {
+            // @ts-ignore
+            const htmlPdfModule = require("html-pdf-node");
+            console.log("[PDF] Reintento de carga de html-pdf-node:", {
+              loaded: !!htmlPdfModule,
+              hasGeneratePdf: !!htmlPdfModule.generatePdf,
+            });
+
+            htmlPdfModule
+              .generatePdf({ content: html }, options)
+              .then((buffer: Buffer) => {
+                console.log(
+                  "[PDF] PDF generado exitosamente con html-pdf-node en desarrollo"
+                );
+                resolve(buffer);
+              })
+              .catch((innerErr: any) => {
+                console.error(
+                  "[PDF] Error interno al generar PDF con html-pdf-node:",
+                  innerErr
+                );
+                reject(innerErr);
+              });
+          } catch (moduleErr) {
+            console.error("[PDF] Error al recargar html-pdf-node:", moduleErr);
+
+            // Fallback a jsPDF en desarrollo
+            console.log("[PDF] Usando jsPDF como fallback en desarrollo");
+            generatePdfWithJSPDF(html, options).then(resolve).catch(reject);
+          }
+        } else {
+          htmlPdf
+            .generatePdf({ content: html }, options)
+            .then((buffer: Buffer) => {
+              console.log("[PDF] PDF generado exitosamente con html-pdf-node");
+              resolve(buffer);
+            })
+            .catch((err: any) => {
+              console.error(
+                "[PDF] Error al generar PDF con html-pdf-node:",
+                err
+              );
+              reject(err);
+            });
+        }
+      } catch (outerErr) {
+        console.error(
+          "[PDF] Error general en generación de PDF en desarrollo:",
+          outerErr
+        );
+        reject(outerErr);
+      }
     });
   }
 
   // En producción, usamos jsPDF directamente
   console.log("[PDF] Generando PDF con jsPDF (producción)");
+  return generatePdfWithJSPDF(html, options);
+}
 
+// Función auxiliar para generar PDF con jsPDF
+async function generatePdfWithJSPDF(
+  html: string,
+  options: any
+): Promise<Buffer> {
   return new Promise<Buffer>(async (resolve, reject) => {
     try {
       // Importar bibliotecas necesarias
