@@ -20,6 +20,7 @@ import {
   Receipt,
   User,
   Shield,
+  MessageSquare,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMemo } from "react";
@@ -147,6 +148,12 @@ export function AppSidebar({ activeUrl, ...props }: AppSidebarProps) {
         title: "Vendedores",
         url: "/admin/vendedores",
         icon: Users,
+      },
+      // Agregar el chat PaltAI para todos los administradores
+      {
+        title: "AI Chat",
+        url: "/admin/paltai",
+        icon: MessageSquare,
       },
     ];
 
