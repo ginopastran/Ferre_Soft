@@ -82,10 +82,16 @@ export default async function handler(
     }
 
     // Si todo sale bien, refrescamos las cookies para mantener la sesión
-    if (token && process.env.NODE_ENV === "development") {
-      // No necesitamos SameSite=None y Secure en desarrollo
+    // Ahora lo hacemos siempre sin importar el entorno para mantener la sesión activa
+    if (token) {
+      // En producción usamos cookies seguras
+      const cookieOptions =
+        process.env.NODE_ENV === "production"
+          ? `; Path=/; Max-Age=86400; HttpOnly; Secure; SameSite=Strict`
+          : `; Path=/; Max-Age=86400; HttpOnly`;
+
       res.setHeader("Set-Cookie", [
-        `token=${token}; Path=/; Max-Age=86400; HttpOnly`,
+        `token=${token}${cookieOptions}`,
         `userData=${JSON.stringify({
           id: user.id,
           nombre: user.nombre,

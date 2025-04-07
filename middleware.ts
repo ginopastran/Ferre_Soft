@@ -3,32 +3,59 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 
-export async function middleware(req: NextRequest) {
-  console.log("Middleware ejecutándose en:", req.nextUrl.pathname);
+// Lista de rutas públicas que no requieren autenticación
+const PUBLIC_ROUTES = [
+  "/login",
+  "/register",
+  "/offline",
+  "/catalogo",
+  "/catalogo-tabla",
+];
 
-  // Permitir acceso a archivos públicos y rutas de autenticación
-  if (
-    req.nextUrl.pathname === "/manifest.json" ||
-    req.nextUrl.pathname === "/login" ||
-    req.nextUrl.pathname === "/register" ||
-    req.nextUrl.pathname.startsWith("/icons/") ||
-    req.nextUrl.pathname === "/sw.js" ||
-    req.nextUrl.pathname.startsWith("/workbox-") ||
-    req.nextUrl.pathname.includes("worker") ||
-    req.nextUrl.pathname === "/offline" ||
-    req.nextUrl.pathname === "/catalogo" ||
-    req.nextUrl.pathname === "/api/productos/catalogo" ||
-    req.nextUrl.pathname.startsWith("/api/") ||
-    req.headers.get("online") === "false"
-  ) {
-    if (req.nextUrl.pathname === "/sw.js") {
+// Lista de rutas de recursos estáticos y API que no deben ser bloqueadas
+const EXCLUDED_ROUTES = [
+  "/manifest.json",
+  "/icons/",
+  "/sw.js",
+  "/workbox-",
+  "/api/",
+  "/favicon.ico",
+  "/_next/",
+];
+
+export async function middleware(req: NextRequest) {
+  const pathname = req.nextUrl.pathname;
+  console.log("Middleware ejecutándose en:", pathname);
+
+  // Verificar si es una ruta pública o un recurso estático
+  const isPublicRoute = PUBLIC_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`)
+  );
+  const isExcludedRoute = EXCLUDED_ROUTES.some((route) =>
+    pathname.startsWith(route)
+  );
+  const isOfflineMode = req.headers.get("online") === "false";
+
+  // Permitir acceso directo a rutas públicas, recursos excluidos o en modo offline
+  if (isPublicRoute || isExcludedRoute || isOfflineMode) {
+    // Asegurar que los archivos de service worker tengan el tipo MIME correcto
+    if (pathname === "/sw.js") {
       const response = NextResponse.next();
       response.headers.set("Content-Type", "application/javascript");
       return response;
     }
+
+    // Para rutas públicas (no APIs ni recursos estáticos), configurar nocache
+    if (isPublicRoute && !pathname.startsWith("/api/")) {
+      const response = NextResponse.next();
+      response.headers.set("Cache-Control", "no-store, max-age=0");
+      return response;
+    }
+
     return NextResponse.next();
   }
 
+  // Obtener token y datos de usuario
   const token = req.cookies.get("token");
   const userData = req.cookies.get("userData");
 
@@ -40,17 +67,11 @@ export async function middleware(req: NextRequest) {
   // Redirigir a login si no hay token o userData
   if (!token?.value || !userData?.value) {
     console.log("Redirigiendo a login (no hay token o userData)");
-    if (req.nextUrl.pathname === "/") {
-      return NextResponse.redirect(new URL("/login", req.url));
-    }
-    // Si estamos offline, permitir acceso
-    if (req.headers.get("online") === "false") {
-      return NextResponse.next();
-    }
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
   try {
+    // Verificar validez del token
     const { payload } = await jwtVerify(
       token.value,
       new TextEncoder().encode(process.env.JWT_SECRET)
@@ -69,8 +90,8 @@ export async function middleware(req: NextRequest) {
       throw new Error("Datos de usuario inválidos");
     }
 
-    // Redirecciones específicas
-    if (req.nextUrl.pathname === "/") {
+    // Redirecciones específicas para la página principal
+    if (pathname === "/") {
       let redirectUrl;
       if (user.rol.nombre === "ADMIN" || user.rol.nombre === "SUPERADMIN") {
         redirectUrl = new URL("/admin/reporte", req.url);
@@ -84,10 +105,10 @@ export async function middleware(req: NextRequest) {
     }
 
     // Proteger rutas de admin
-    if (req.nextUrl.pathname.startsWith("/admin")) {
+    if (pathname.startsWith("/admin")) {
       if (user.rol.nombre === "VENDEDOR") {
         // Si es vendedor, solo permitir acceso a /admin/ventas
-        if (!req.nextUrl.pathname.startsWith("/admin/ventas")) {
+        if (!pathname.startsWith("/admin/ventas")) {
           console.log(
             "Vendedor intentando acceder a ruta protegida, redirigiendo a /admin/ventas"
           );
@@ -105,8 +126,14 @@ export async function middleware(req: NextRequest) {
       }
     }
 
-    console.log("Acceso permitido a:", req.nextUrl.pathname);
-    return NextResponse.next();
+    console.log("Acceso permitido a:", pathname);
+
+    // Asegurar que la respuesta no se almacene en caché para rutas protegidas
+    const response = NextResponse.next();
+    response.headers.set("Cache-Control", "no-store, max-age=0");
+    response.headers.set("Pragma", "no-cache");
+    response.headers.set("Expires", "0");
+    return response;
   } catch (error) {
     // Limpiar cookies y redirigir a login
     console.error("Error en middleware:", error);
@@ -118,5 +145,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: "/((?!api|_next/static|_next/image|favicon.ico).*)",
+  matcher: ["/((?!_next/static|_next/image).*)"],
 };

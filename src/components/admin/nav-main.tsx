@@ -1,71 +1,59 @@
 "use client";
 
-import { ChevronRight, type LucideIcon } from "lucide-react";
-
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import {
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
-} from "@/components/ui/sidebar";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { LucideIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
-export function NavMain({
-  items,
-  activeUrl,
-}: {
+interface NavMainProps {
   items: {
     title: string;
     url: string;
-    icon?: LucideIcon;
-    isActive?: boolean;
-    items?: {
-      title: string;
-      url: string;
-    }[];
+    icon: LucideIcon;
   }[];
   activeUrl: string;
-}) {
+}
+
+export function NavMain({ items, activeUrl }: NavMainProps) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { verifySession } = useAuth();
+
+  const handleNavigation = async (url: string, e: React.MouseEvent) => {
+    e.preventDefault();
+
+    try {
+      verifySession().catch(console.error);
+
+      router.push(url);
+    } catch (error) {
+      console.error("Error de navegación:", error);
+      router.push("/login");
+    }
+  };
+
   return (
-    <SidebarGroup>
-      {/* <SidebarGroupLabel>Platform</SidebarGroupLabel> */}
-      <SidebarMenu>
-        {items.map((item) => (
-          <Collapsible
-            key={item.title}
-            asChild
-            defaultOpen={item.isActive}
-            className="group/collapsible"
-          >
-            <SidebarMenuItem>
-              <CollapsibleTrigger asChild>
-                <Link href={item.url}>
-                  <SidebarMenuButton
-                    tooltip={item.title}
-                    className={`group-data-[collapsible=icon]:!p-1.5 flex items-center text-base [&>svg]:size-5 hover:bg-indigo-gradient hover:text-white transition-all duration-300 ease-in-out active:bg-indigo-600 active:text-white py-5  ${
-                      activeUrl === item.url
-                        ? "font-medium text-white bg-indigo-gradient"
-                        : " text-muted-foreground"
-                    }`}
-                  >
-                    {item.icon && <item.icon />}
-                    {item.title}
-                  </SidebarMenuButton>
-                </Link>
-              </CollapsibleTrigger>
-            </SidebarMenuItem>
-          </Collapsible>
-        ))}
-      </SidebarMenu>
-    </SidebarGroup>
+    <div className="flex flex-col gap-1 px-3">
+      {items.map((item) => (
+        <a
+          key={item.url}
+          href={item.url}
+          onClick={(e) => handleNavigation(item.url, e)}
+          className={cn(
+            "flex h-9 items-center gap-3 rounded-lg px-3 text-sm transition-colors duration-200 hover:bg-secondary/20 hover:text-secondary-foreground whitespace-nowrap",
+            {
+              "bg-primary/10 text-primary":
+                pathname === item.url || activeUrl === item.url,
+              "text-muted-foreground":
+                pathname !== item.url && activeUrl !== item.url,
+            }
+          )}
+        >
+          <item.icon className="h-5 w-5" />
+          <span className="font-medium">{item.title}</span>
+        </a>
+      ))}
+    </div>
   );
 }
