@@ -7,6 +7,11 @@ import {
   streamText,
 } from "ai";
 
+// Extender el tipo Message para incluir 'parts'
+interface ExtendedMessage extends Message {
+  parts?: any;
+}
+
 import { customModel } from "@/lib/ai";
 import { models } from "@/lib/ai/models";
 import { getSystemPrompt } from "@/lib/ai/prompts";
@@ -80,7 +85,18 @@ export async function POST(request: Request) {
     }
 
     await saveMessages({
-      messages: [{ ...userMessage, createdAt: new Date(), chatId: id }],
+      messages: [
+        {
+          ...userMessage,
+          createdAt: new Date(),
+          chatId: id,
+          content:
+            typeof userMessage.content === "string"
+              ? userMessage.content
+              : JSON.stringify(userMessage.content),
+          parts: userMessage.parts || null,
+        },
+      ],
     });
 
     const systemPrompt = await getSystemPrompt();
@@ -118,7 +134,11 @@ export async function POST(request: Request) {
                         id: message.id,
                         chatId: id,
                         role: message.role,
-                        content: message.content,
+                        content:
+                          typeof message.content === "string"
+                            ? message.content
+                            : JSON.stringify(message.content),
+                        parts: (message as any).parts || null,
                         createdAt: new Date(),
                       };
                     }

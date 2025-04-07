@@ -114,7 +114,8 @@ model Message {
   id        String   @id @default(uuid())
   chatId    String
   role      String
-  content   Json
+  content   String
+  parts     Json?
   createdAt DateTime @default(now())
   chat      Chat     @relation(fields: [chatId], references: [id])
   votes     Vote[]
