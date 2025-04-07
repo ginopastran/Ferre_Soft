@@ -57,22 +57,21 @@ export function NavUser() {
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        {isAdmin ||
-          (isSuperAdmin && (
-            <Link href={"/admin/paltai"}>
-              <SidebarMenuButton
-                tooltip={"Chat Paltai"}
-                className={`group-data-[collapsible=icon]:!p-1.5 flex items-center text-base [&>svg]:size-5 hover:bg-indigo-gradient hover:text-white transition-all duration-300 ease-in-out active:bg-indigo-600 active:text-white py-5 mb-1 ${
-                  pathname === "/admin/paltai"
-                    ? "font-medium text-white bg-indigo-gradient"
-                    : " text-muted-foreground"
-                }`}
-              >
-                {<Bot />}
-                {"Chat Palt.AI"}
-              </SidebarMenuButton>
-            </Link>
-          ))}
+        {/* {(isAdmin || isSuperAdmin) && (
+          <Link href={"/admin/paltai"}>
+            <SidebarMenuButton
+              tooltip={"Chat Paltai"}
+              className={`group-data-[collapsible=icon]:!p-1.5 flex items-center text-base [&>svg]:size-5 hover:bg-indigo-gradient hover:text-white transition-all duration-300 ease-in-out active:bg-indigo-600 active:text-white py-5 mb-1 ${
+                pathname === "/admin/paltai"
+                  ? "font-medium text-white bg-indigo-gradient"
+                  : " text-muted-foreground"
+              }`}
+            >
+              {<Bot />}
+              {"Chat Palt.AI"}
+            </SidebarMenuButton>
+          </Link>
+        )} */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
