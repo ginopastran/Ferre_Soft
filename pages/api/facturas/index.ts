@@ -239,10 +239,146 @@ export default async function handler(
           tipoComprobante === "NOTA_CREDITO_B"
         ) {
           try {
-            // Código para obtener datos de AFIP para notas de crédito
-            // ... (similar al código para facturas)
+            // Verificar conexión con AFIP
+            let afipConectado = false;
+
+            // Obtener las funciones de AFIP
+            const afipUtils = await getAfipUtils();
+
+            // En producción, evitar verificar conexión si se especificó bypass
+            const shouldBypassAfip =
+              process.env.NODE_ENV === "production" &&
+              process.env.BYPASS_AFIP_IN_PRODUCTION === "true";
+
+            if (!shouldBypassAfip) {
+              afipConectado = await afipUtils.verificarConexion();
+              console.log(
+                "Estado de conexión con AFIP para Nota de Crédito:",
+                afipConectado
+              );
+            } else {
+              console.log(
+                "Saltando verificación de AFIP en producción (modo bypass)"
+              );
+            }
+
+            // Proceder con la generación de la Nota de Crédito electrónica
+            if (afipConectado && !shouldBypassAfip) {
+              console.log("Obteniendo datos de AFIP para nota de crédito:", {
+                tipoComprobante,
+                numeroFactura,
+                clienteId,
+              });
+
+              // Obtener detalles completos para enviar a AFIP
+              const detallesCompletos = detalles.map((detalle) => ({
+                ...detalle,
+                subtotal:
+                  Number(detalle.cantidad) * Number(detalle.precioUnitario),
+              }));
+
+              // Crear objeto de nota de crédito para AFIP
+              const notaCreditoParaAfip = {
+                numero: numeroFactura,
+                tipoComprobante,
+                total,
+              };
+
+              // Obtener datos del cliente para AFIP
+              const cliente = await prisma.cliente.findUnique({
+                where: { id: Number(clienteId) },
+              });
+
+              if (!cliente) {
+                throw new Error("Cliente no encontrado");
+              }
+
+              // Llamar a la función para generar nota de crédito electrónica
+              try {
+                datosAfip = await afipUtils.generarFacturaElectronica(
+                  notaCreditoParaAfip,
+                  cliente,
+                  detallesCompletos
+                );
+
+                console.log(
+                  "Datos obtenidos de AFIP para nota de crédito:",
+                  datosAfip
+                );
+              } catch (afipError) {
+                // Verificar si es un error específico que debemos manejar de forma especial
+                const errorMsg =
+                  afipError instanceof Error
+                    ? afipError.message
+                    : String(afipError);
+
+                // Errores que requieren atención especial
+                if (
+                  errorMsg.includes(
+                    "Debe emitir una factura de crédito electrónica (FCE)"
+                  )
+                ) {
+                  return res.status(400).json({
+                    error: "Error de validación AFIP",
+                    message: "Este cliente requiere factura MiPyME",
+                    details: errorMsg,
+                  });
+                } else if (errorMsg.includes("CUIT")) {
+                  return res.status(400).json({
+                    error: "Error de validación AFIP",
+                    message:
+                      "El CUIT del cliente no es válido o no está autorizado",
+                    details: errorMsg,
+                  });
+                } else if (errorMsg.includes("Comprobante ya registrado")) {
+                  return res.status(400).json({
+                    error: "Error de validación AFIP",
+                    message: "El comprobante ya fue registrado anteriormente",
+                    details: errorMsg,
+                  });
+                }
+
+                // Re-lanzar el error para el catch general
+                throw afipError;
+              }
+            } else {
+              console.log(
+                "No se obtuvieron datos de AFIP para nota de crédito:",
+                {
+                  tipoComprobante,
+                  afipConectado,
+                  shouldBypassAfip,
+                }
+              );
+            }
           } catch (error) {
-            console.error("Error al obtener datos de AFIP:", error);
+            console.error(
+              "Error al obtener datos de AFIP para nota de crédito:",
+              error
+            );
+
+            // Manejamos el error según su naturaleza
+            const errorMsg =
+              error instanceof Error ? error.message : String(error);
+
+            // Para ciertos errores, devolvemos respuesta inmediata
+            if (
+              errorMsg.includes("validación") ||
+              errorMsg.includes("CUIT") ||
+              errorMsg.includes("MiPyME") ||
+              errorMsg.includes("certificados")
+            ) {
+              return res.status(400).json({
+                error: "Error al procesar nota de crédito con AFIP",
+                message: errorMsg,
+              });
+            }
+
+            // Para otros errores, continuamos y registramos la nota de crédito sin datos de AFIP
+            console.warn(
+              "Continuando sin datos de AFIP para nota de crédito debido a error:",
+              errorMsg
+            );
           }
         }
       }
@@ -414,26 +550,28 @@ export default async function handler(
         // Crear factura y actualizar stock en una transacción
         try {
           const nuevaFactura = await prisma.$transaction(async (tx) => {
-            // Verificar stock
-            for (const detalle of detalles) {
-              const producto = await tx.producto.findUnique({
-                where: { id: Number(detalle.productoId) },
-                select: { id: true, stock: true, descripcion: true },
-              });
+            // Verificar stock solo si no es una nota de crédito (las notas de crédito aumentan stock)
+            if (!req.body.aumentaStock) {
+              for (const detalle of detalles) {
+                const producto = await tx.producto.findUnique({
+                  where: { id: Number(detalle.productoId) },
+                  select: { id: true, stock: true, descripcion: true },
+                });
 
-              console.log("Verificando stock del producto:", {
-                productoId: detalle.productoId,
-                stockActual: producto?.stock,
-                cantidadRequerida: detalle.cantidad,
-                producto,
-              });
+                console.log("Verificando stock del producto:", {
+                  productoId: detalle.productoId,
+                  stockActual: producto?.stock,
+                  cantidadRequerida: detalle.cantidad,
+                  producto,
+                });
 
-              if (!producto || producto.stock < detalle.cantidad) {
-                throw new Error(
-                  `Stock insuficiente para el producto ${
-                    producto?.descripcion || detalle.productoId
-                  }`
-                );
+                if (!producto || producto.stock < detalle.cantidad) {
+                  throw new Error(
+                    `Stock insuficiente para el producto ${
+                      producto?.descripcion || detalle.productoId
+                    }`
+                  );
+                }
               }
             }
 
@@ -510,7 +648,10 @@ export default async function handler(
                 where: { id: Number(detalle.productoId) },
                 data: {
                   stock: {
-                    decrement: Number(detalle.cantidad),
+                    // Si es una nota de crédito, incrementar el stock en lugar de decrementarlo
+                    [req.body.aumentaStock ? "increment" : "decrement"]: Number(
+                      detalle.cantidad
+                    ),
                   },
                 },
               });
@@ -627,19 +768,21 @@ export default async function handler(
       ) {
         try {
           const nuevaFactura = await prisma.$transaction(async (tx) => {
-            // Verificar stock
-            for (const detalle of detalles) {
-              const producto = await tx.producto.findUnique({
-                where: { id: Number(detalle.productoId) },
-                select: { id: true, stock: true, descripcion: true },
-              });
+            // Verificar stock solo si no es una nota de crédito
+            if (!req.body.aumentaStock) {
+              for (const detalle of detalles) {
+                const producto = await tx.producto.findUnique({
+                  where: { id: Number(detalle.productoId) },
+                  select: { id: true, stock: true, descripcion: true },
+                });
 
-              if (!producto || producto.stock < detalle.cantidad) {
-                throw new Error(
-                  `Stock insuficiente para el producto ${
-                    producto?.descripcion || detalle.productoId
-                  }`
-                );
+                if (!producto || producto.stock < detalle.cantidad) {
+                  throw new Error(
+                    `Stock insuficiente para el producto ${
+                      producto?.descripcion || detalle.productoId
+                    }`
+                  );
+                }
               }
             }
 
@@ -691,7 +834,10 @@ export default async function handler(
                 where: { id: Number(detalle.productoId) },
                 data: {
                   stock: {
-                    decrement: Number(detalle.cantidad),
+                    // Si es una nota de crédito, incrementar el stock en lugar de decrementarlo
+                    [req.body.aumentaStock ? "increment" : "decrement"]: Number(
+                      detalle.cantidad
+                    ),
                   },
                 },
               });

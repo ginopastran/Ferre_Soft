@@ -137,8 +137,8 @@ export function ProductDialog({
   ) => {
     const costoNum = typeof costo === "number" ? costo : 0;
     const margenNum = typeof margen === "number" ? margen : 0;
-    const precioSinIva = costoNum * (1 + margenNum / 100);
-    return Number((precioSinIva * (1 + iva / 100)).toFixed(2));
+    // Ya no aplicamos el IVA al precio final, solo el margen de ganancia
+    return Number((costoNum * (1 + margenNum / 100)).toFixed(2));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -200,6 +200,10 @@ export function ProductDialog({
           <DialogTitle className="text-2xl font-bold text-indigo-gradient">
             {mode === "create" ? "Nuevo Producto" : "Editar Producto"}
           </DialogTitle>
+          <p className="text-sm text-muted-foreground mt-2">
+            Los precios finales se calculan ahora sin IVA. El porcentaje de IVA
+            es informativo y se aplicará automáticamente durante la facturación.
+          </p>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -314,6 +318,8 @@ export function ProductDialog({
                     ...formData,
                     precioCosto: costo,
                   };
+
+                  // Calcular precios finales solo con margen (sin IVA)
                   newFormData.precioFinal1 = calculatePrecioFinal(
                     costo,
                     newFormData.margenGanancia1,
@@ -331,7 +337,7 @@ export function ProductDialog({
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">IVA %</label>
+              <label className="text-sm font-medium">IVA % (informativo)</label>
               <Input
                 type="number"
                 step="0.1"
@@ -339,21 +345,12 @@ export function ProductDialog({
                 value={formData.iva}
                 onChange={(e) => {
                   const iva = parseFloat(e.target.value);
-                  const newFormData = {
+                  setFormData({
                     ...formData,
-                    iva,
-                  };
-                  newFormData.precioFinal1 = calculatePrecioFinal(
-                    newFormData.precioCosto,
-                    newFormData.margenGanancia1,
-                    iva
-                  );
-                  newFormData.precioFinal2 = calculatePrecioFinal(
-                    newFormData.precioCosto,
-                    newFormData.margenGanancia2,
-                    iva
-                  );
-                  setFormData(newFormData);
+                    iva: iva,
+                    // Ya no recalculamos los precios finales cuando cambia el IVA
+                    // porque el IVA ahora es solo informativo
+                  });
                 }}
                 disabled={isLoading}
               />
@@ -402,7 +399,9 @@ export function ProductDialog({
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Precio Final</label>
+                <label className="text-sm font-medium">
+                  Precio Final (sin IVA)
+                </label>
                 <Input
                   type="number"
                   step="0.01"
@@ -438,7 +437,9 @@ export function ProductDialog({
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Precio Final</label>
+                <label className="text-sm font-medium">
+                  Precio Final (sin IVA)
+                </label>
                 <Input
                   type="number"
                   step="0.01"

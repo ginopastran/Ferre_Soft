@@ -36,8 +36,8 @@ export default async function handler(
       case 8: // Nota de Crédito B
         tipoComprobanteDB = "NOTA_CREDITO_B";
         break;
-      case 13: // Nota de Crédito C
-        tipoComprobanteDB = "NOTA_CREDITO_C";
+        // case 13: // Nota de Crédito C
+        //   tipoComprobanteDB = "NOTA_CREDITO_C";
         break;
       default:
         return res

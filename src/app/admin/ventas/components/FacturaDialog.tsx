@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2 } from "lucide-react";
+import { Info, Plus, Trash2 } from "lucide-react";
 import { ProductSearchDialog } from "./ProductSearchDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatCurrency } from "@/lib/utils/format";
@@ -64,14 +64,15 @@ export function FacturaDialog({
   const [productos, setProductos] = useState<Producto[]>([]);
   const [clienteId, setClienteId] = useState<string>("");
   const [tipoComprobante, setTipoComprobante] = useState<string>("");
-  const [tipoIvaRemito, setTipoIvaRemito] = useState<"sin_iva" | "iva_10_5">(
-    "sin_iva"
-  );
+  const [tipoIvaRemito, setTipoIvaRemito] = useState<
+    "sin_iva" | "iva_10_5" | "iva_21"
+  >("sin_iva");
   const [detalles, setDetalles] = useState<DetalleFactura[]>([]);
   const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
   const [listaPrecio, setListaPrecio] = useState<"1" | "2">("1");
   const [clienteSeleccionado, setClienteSeleccionado] =
     useState<Cliente | null>(null);
+  const [aumentaStock, setAumentaStock] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -86,30 +87,39 @@ export function FacturaDialog({
       const nuevosDetalles = detalles.map((detalle) => {
         let precioFinal;
 
-        if (tipoComprobante === "REMITO") {
-          // Para remitos, primero calculamos el precio base sin IVA usando el precio de costo y el margen
-          const margen =
-            listaPrecio === "1"
-              ? detalle.producto.margenGanancia1
-              : detalle.producto.margenGanancia2;
+        // Calculamos el precio base sin IVA usando el precio de costo y el margen
+        const margen =
+          listaPrecio === "1"
+            ? detalle.producto.margenGanancia1
+            : detalle.producto.margenGanancia2;
 
-          // Precio base sin IVA = Precio de costo * (1 + margen/100)
-          const precioBaseSinIva =
-            detalle.producto.precioCosto * (1 + margen / 100);
+        // Precio base sin IVA = Precio de costo * (1 + margen/100)
+        const precioBaseSinIva =
+          detalle.producto.precioCosto * (1 + margen / 100);
 
+        if (
+          tipoComprobante === "REMITO" ||
+          tipoComprobante === "NOTA_CREDITO_REMITO"
+        ) {
           if (tipoIvaRemito === "sin_iva") {
             // Para "Sin IVA", usamos el precio base sin IVA
             precioFinal = precioBaseSinIva;
-          } else {
+          } else if (tipoIvaRemito === "iva_10_5") {
             // Para "Con IVA 10,5%", aplicamos 10.5% de IVA al precio base sin IVA
             precioFinal = precioBaseSinIva * 1.105;
+          } else {
+            // Para "Con IVA 21%", aplicamos 21% de IVA al precio base sin IVA
+            precioFinal = precioBaseSinIva * 1.21;
           }
+        } else if (
+          tipoComprobante === "FACTURA_A" ||
+          tipoComprobante === "NOTA_CREDITO_A"
+        ) {
+          // Para Factura A y Nota de Crédito A, usamos el IVA configurado en el producto
+          precioFinal = precioBaseSinIva * (1 + detalle.producto.iva / 100);
         } else {
-          // Para otros tipos de comprobante, usamos el precio final normal
-          precioFinal =
-            listaPrecio === "1"
-              ? detalle.producto.precioFinal1
-              : detalle.producto.precioFinal2;
+          // Para otros tipos de comprobante (como Nota de Crédito C), usamos el precio con IVA 21%
+          precioFinal = precioBaseSinIva * 1.21;
         }
 
         return {
@@ -197,6 +207,7 @@ export function FacturaDialog({
       clienteId,
       tipoComprobante,
       vendedorId: user?.id,
+      aumentaStock,
       detalles: detalles.map(({ productoId, cantidad, precioUnitario }) => ({
         productoId,
         cantidad,
@@ -210,6 +221,7 @@ export function FacturaDialog({
         clienteId: Number(clienteId),
         tipoComprobante,
         vendedorId: user?.id,
+        aumentaStock,
         detalles: detalles.map(({ productoId, cantidad, precioUnitario }) => ({
           productoId,
           cantidad,
@@ -227,8 +239,13 @@ export function FacturaDialog({
 
   const handleTipoComprobanteChange = (value: string) => {
     setTipoComprobante(value);
+    // Detectar si es un tipo de comprobante que aumenta stock
+    const esComprobanteAumentaStock =
+      value === "NOTA_CREDITO_A" || value === "NOTA_CREDITO_REMITO";
+    setAumentaStock(esComprobanteAumentaStock);
+
     // Resetear el tipo de IVA si se cambia el tipo de comprobante
-    if (value !== "REMITO") {
+    if (value !== "REMITO" && value !== "NOTA_CREDITO_REMITO") {
       setTipoIvaRemito("sin_iva");
     }
   };
@@ -236,27 +253,36 @@ export function FacturaDialog({
   const handleProductSelect = (producto: Producto) => {
     let precioFinal;
 
-    if (tipoComprobante === "REMITO") {
-      // Para remitos, primero calculamos el precio base sin IVA usando el precio de costo y el margen
-      const margen =
-        listaPrecio === "1"
-          ? producto.margenGanancia1
-          : producto.margenGanancia2;
+    // Calculamos el precio base sin IVA usando el precio de costo y el margen
+    const margen =
+      listaPrecio === "1" ? producto.margenGanancia1 : producto.margenGanancia2;
 
-      // Precio base sin IVA = Precio de costo * (1 + margen/100)
-      const precioBaseSinIva = producto.precioCosto * (1 + margen / 100);
+    // Precio base sin IVA = Precio de costo * (1 + margen/100)
+    const precioBaseSinIva = producto.precioCosto * (1 + margen / 100);
 
+    if (
+      tipoComprobante === "REMITO" ||
+      tipoComprobante === "NOTA_CREDITO_REMITO"
+    ) {
       if (tipoIvaRemito === "sin_iva") {
         // Para "Sin IVA", usamos el precio base sin IVA
         precioFinal = precioBaseSinIva;
-      } else {
+      } else if (tipoIvaRemito === "iva_10_5") {
         // Para "Con IVA 10,5%", aplicamos 10.5% de IVA al precio base sin IVA
         precioFinal = precioBaseSinIva * 1.105;
+      } else {
+        // Para "Con IVA 21%", aplicamos 21% de IVA al precio base sin IVA
+        precioFinal = precioBaseSinIva * 1.21;
       }
+    } else if (
+      tipoComprobante === "FACTURA_A" ||
+      tipoComprobante === "NOTA_CREDITO_A"
+    ) {
+      // Para Factura A y Nota de Crédito A, usamos el IVA configurado en el producto
+      precioFinal = precioBaseSinIva * (1 + producto.iva / 100);
     } else {
-      // Para otros tipos de comprobante, usamos el precio final normal
-      precioFinal =
-        listaPrecio === "1" ? producto.precioFinal1 : producto.precioFinal2;
+      // Para otros tipos de comprobante (como Nota de Crédito C), usamos el precio con IVA 21%
+      precioFinal = precioBaseSinIva * 1.21;
     }
 
     setDetalles([
@@ -284,8 +310,13 @@ export function FacturaDialog({
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-indigo-gradient">
-            Nueva Factura
+            {aumentaStock ? "Nueva Nota de Crédito" : "Nueva Factura"}
           </DialogTitle>
+          {aumentaStock && (
+            <p className="text-sm text-muted-foreground mt-1">
+              Esta operación aumentará el stock de los productos seleccionados.
+            </p>
+          )}
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -323,8 +354,14 @@ export function FacturaDialog({
                 <SelectContent>
                   <SelectItem value="FACTURA_A">Factura A</SelectItem>
                   <SelectItem value="REMITO">Remito</SelectItem>
-                  <SelectItem value="NOTA_CREDITO_C">
+                  {/* <SelectItem value="NOTA_CREDITO_C">
                     Nota de Crédito C
+                  </SelectItem> */}
+                  <SelectItem value="NOTA_CREDITO_A">
+                    Nota de Crédito A (+ Stock)
+                  </SelectItem>
+                  <SelectItem value="NOTA_CREDITO_REMITO">
+                    Nota de Crédito Remito (+ Stock)
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -347,14 +384,18 @@ export function FacturaDialog({
               </Select>
             </div>
 
-            {tipoComprobante === "REMITO" && (
+            {(tipoComprobante === "REMITO" ||
+              tipoComprobante === "NOTA_CREDITO_REMITO") && (
               <div className="space-y-2 md:col-span-3">
                 <label className="text-sm font-medium">
-                  Tipo de IVA para Remito
+                  Tipo de IVA para{" "}
+                  {tipoComprobante === "REMITO"
+                    ? "Remito"
+                    : "Nota de Crédito Remito"}
                 </label>
                 <Select
                   value={tipoIvaRemito}
-                  onValueChange={(value: "sin_iva" | "iva_10_5") =>
+                  onValueChange={(value: "sin_iva" | "iva_10_5" | "iva_21") =>
                     setTipoIvaRemito(value)
                   }
                   disabled={isLoading}
@@ -365,8 +406,20 @@ export function FacturaDialog({
                   <SelectContent>
                     <SelectItem value="sin_iva">Sin IVA</SelectItem>
                     <SelectItem value="iva_10_5">Con IVA 10,5%</SelectItem>
+                    <SelectItem value="iva_21">Con IVA 21%</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            )}
+
+            {aumentaStock && (
+              <div className="md:col-span-3 bg-blue-50 p-3 rounded-md border border-blue-200 mt-2">
+                <p className="text-blue-700 text-sm flex items-center">
+                  <Info className="mr-2 h-4 w-4" />
+                  Este tipo de comprobante&nbsp;
+                  <span className="font-bold">aumentará</span>&nbsp;el stock de
+                  los productos seleccionados.
+                </p>
               </div>
             )}
           </div>
@@ -478,7 +531,11 @@ export function FacturaDialog({
               className="bg-indigo-gradient"
               disabled={isLoading || detalles.length === 0}
             >
-              {isLoading ? "Guardando..." : "Guardar Factura"}
+              {isLoading
+                ? "Guardando..."
+                : aumentaStock
+                ? "Guardar Nota de Crédito"
+                : "Guardar Factura"}
             </Button>
           </div>
         </form>
