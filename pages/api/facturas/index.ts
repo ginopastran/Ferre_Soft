@@ -547,150 +547,136 @@ export default async function handler(
           );
         }
 
-        // Crear factura y actualizar stock en una transacción
-        try {
-          const nuevaFactura = await prisma.$transaction(async (tx) => {
-            // Verificar stock solo si no es una nota de crédito (las notas de crédito aumentan stock)
-            if (!req.body.aumentaStock) {
-              for (const detalle of detalles) {
-                const producto = await tx.producto.findUnique({
-                  where: { id: Number(detalle.productoId) },
-                  select: { id: true, stock: true, descripcion: true },
-                });
+        // Crear factura para remitos y notas de crédito
+        if (
+          tipoComprobante === "REMITO" ||
+          tipoComprobante.startsWith("NOTA_CREDITO")
+        ) {
+          try {
+            const nuevaFactura = await prisma.$transaction(async (tx) => {
+              // Verificar stock solo si no es una nota de crédito
+              if (!req.body.aumentaStock) {
+                for (const detalle of detalles) {
+                  const producto = await tx.producto.findUnique({
+                    where: { id: Number(detalle.productoId) },
+                    select: { id: true, stock: true, descripcion: true },
+                  });
 
-                console.log("Verificando stock del producto:", {
-                  productoId: detalle.productoId,
-                  stockActual: producto?.stock,
-                  cantidadRequerida: detalle.cantidad,
-                  producto,
-                });
-
-                if (!producto || producto.stock < detalle.cantidad) {
-                  throw new Error(
-                    `Stock insuficiente para el producto ${
-                      producto?.descripcion || detalle.productoId
-                    }`
-                  );
+                  if (!producto || producto.stock < detalle.cantidad) {
+                    throw new Error(
+                      `Stock insuficiente para el producto ${
+                        producto?.descripcion || detalle.productoId
+                      }`
+                    );
+                  }
                 }
               }
-            }
 
-            console.log("Intentando crear factura con datos:", {
-              numero: numeroFactura,
-              clienteId: Number(clienteId),
-              vendedorId: Number(vendedorId),
-              tipoComprobante,
-              total,
-              detalles: detalles.map((detalle) => ({
-                productoId: Number(detalle.productoId),
-                cantidad: Number(detalle.cantidad),
-                precioUnitario: Number(detalle.precioUnitario),
-                subtotal: Number(detalle.cantidad * detalle.precioUnitario),
-              })),
-            });
+              // Crear datos adicionales para AFIP si existen
+              const datosAdicionalesAfip = datosAfip
+                ? {
+                    cae: datosAfip.cae,
+                    vencimientoCae: datosAfip.vencimientoCae,
+                    afipComprobante: datosAfip.numeroComprobante,
+                  }
+                : {};
 
-            // Crear datos adicionales para AFIP si existen
-            datosAdicionalesAfip = datosAfip
-              ? {
-                  cae: datosAfip.cae,
-                  vencimientoCae: datosAfip.vencimientoCae,
-                  afipComprobante: datosAfip.numeroComprobante,
-                }
-              : {};
+              console.log(
+                "Datos adicionales de AFIP para guardado:",
+                datosAdicionalesAfip
+              );
 
-            const factura = await tx.factura.create({
-              data: {
-                numero: numeroFactura,
-                fecha: new Date(),
-                clienteId: Number(clienteId),
-                vendedorId: Number(vendedorId),
-                tipoComprobante,
-                total,
-                pagado: 0,
-                estado: "PENDIENTE",
-                // Agregar datos de AFIP si existen
-                ...datosAdicionalesAfip,
-                detalles: {
-                  create: detalles.map((detalle) => ({
-                    productoId: Number(detalle.productoId),
-                    cantidad: Number(detalle.cantidad),
-                    precioUnitario: Number(
-                      Number(detalle.precioUnitario).toFixed(2)
-                    ),
-                    subtotal: Number(
-                      (
-                        Number(detalle.cantidad) *
-                        Number(detalle.precioUnitario)
-                      ).toFixed(2)
-                    ),
-                  })),
-                },
-              },
-              include: {
-                cliente: {
-                  select: {
-                    nombre: true,
-                  },
-                },
-                detalles: {
-                  include: {
-                    producto: true,
-                  },
-                },
-              },
-            });
-
-            console.log("Factura creada exitosamente:", factura);
-
-            // Actualizar stock
-            for (const detalle of detalles) {
-              await tx.producto.update({
-                where: { id: Number(detalle.productoId) },
+              const factura = await tx.factura.create({
                 data: {
-                  stock: {
-                    // Si es una nota de crédito, incrementar el stock en lugar de decrementarlo
-                    [req.body.aumentaStock ? "increment" : "decrement"]: Number(
-                      detalle.cantidad
-                    ),
+                  numero: numeroFactura,
+                  fecha: new Date(),
+                  clienteId: Number(clienteId),
+                  vendedorId: Number(vendedorId),
+                  tipoComprobante,
+                  total,
+                  pagado: 0,
+                  estado: "PENDIENTE",
+                  // Agregar datos de AFIP si existen
+                  ...datosAdicionalesAfip,
+                  detalles: {
+                    create: detalles.map((detalle) => ({
+                      productoId: Number(detalle.productoId),
+                      cantidad: Number(detalle.cantidad),
+                      precioUnitario: Number(
+                        Number(detalle.precioUnitario).toFixed(2)
+                      ),
+                      subtotal: Number(
+                        (
+                          Number(detalle.cantidad) *
+                          Number(detalle.precioUnitario)
+                        ).toFixed(2)
+                      ),
+                    })),
+                  },
+                },
+                include: {
+                  cliente: {
+                    select: {
+                      nombre: true,
+                    },
+                  },
+                  detalles: {
+                    include: {
+                      producto: true,
+                    },
                   },
                 },
               });
+
+              // Actualizar stock
+              for (const detalle of detalles) {
+                await tx.producto.update({
+                  where: { id: Number(detalle.productoId) },
+                  data: {
+                    stock: {
+                      // Si es una nota de crédito, incrementar el stock en lugar de decrementarlo
+                      [req.body.aumentaStock ? "increment" : "decrement"]:
+                        Number(detalle.cantidad),
+                    },
+                  },
+                });
+              }
+
+              return factura;
+            });
+
+            return res.status(201).json({
+              ...nuevaFactura,
+              afip: datosAfip
+                ? {
+                    cae: (datosAfip as AfipResponse).cae,
+                    vencimientoCae: (datosAfip as AfipResponse).vencimientoCae,
+                    numeroComprobante: (datosAfip as AfipResponse)
+                      .numeroComprobante,
+                  }
+                : null,
+            });
+          } catch (error) {
+            // Usar una forma más segura de registrar el error
+            console.error(
+              "Error en la creación de factura:",
+              error instanceof Error
+                ? { message: error.message, stack: error.stack }
+                : String(error)
+            );
+
+            let errorMessage = "Error desconocido";
+            if (error instanceof Error) {
+              errorMessage = error.message;
+            } else if (error !== null && error !== undefined) {
+              errorMessage = String(error);
             }
 
-            return factura;
-          });
-
-          return res.status(201).json({
-            ...nuevaFactura,
-            afip: datosAfip
-              ? {
-                  cae: (datosAfip as AfipResponse).cae,
-                  vencimientoCae: (datosAfip as AfipResponse).vencimientoCae,
-                  numeroComprobante: (datosAfip as AfipResponse)
-                    .numeroComprobante,
-                }
-              : null,
-          });
-        } catch (error) {
-          // Usar una forma más segura de registrar el error
-          console.error(
-            "Error en la creación de factura:",
-            error instanceof Error
-              ? { message: error.message, stack: error.stack }
-              : String(error)
-          );
-
-          let errorMessage = "Error desconocido";
-          if (error instanceof Error) {
-            errorMessage = error.message;
-          } else if (error !== null && error !== undefined) {
-            errorMessage = String(error);
+            return res.status(500).json({
+              error: "Error al crear la factura",
+              details: errorMessage,
+            });
           }
-
-          return res.status(500).json({
-            error: "Error al crear la factura",
-            details: errorMessage,
-          });
         }
       }
 
@@ -785,6 +771,20 @@ export default async function handler(
                 }
               }
             }
+
+            // Crear datos adicionales para AFIP si existen
+            const datosAdicionalesAfip = datosAfip
+              ? {
+                  cae: datosAfip.cae,
+                  vencimientoCae: datosAfip.vencimientoCae,
+                  afipComprobante: datosAfip.numeroComprobante,
+                }
+              : {};
+
+            console.log(
+              "Datos adicionales de AFIP para guardado:",
+              datosAdicionalesAfip
+            );
 
             const factura = await tx.factura.create({
               data: {
