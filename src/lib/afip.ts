@@ -744,11 +744,11 @@ export const generarFacturaElectronica = async (
 
     // Determinar la condición IVA del receptor según el tipo de comprobante
     let condicionIVAReceptorId;
-    if (tipoComprobante === 1) {
-      // Factura A
+    if (tipoComprobante === 1 || tipoComprobante === 3) {
+      // Factura A o Nota de Crédito A
       condicionIVAReceptorId = 1; // IVA Responsable Inscripto
-    } else if (tipoComprobante === 6) {
-      // Factura B
+    } else if (tipoComprobante === 6 || tipoComprobante === 8) {
+      // Factura B o Nota de Crédito B
       condicionIVAReceptorId = 5; // Consumidor Final por defecto
 
       // Si es monotributista o exento, usar el valor correspondiente
@@ -799,6 +799,67 @@ export const generarFacturaElectronica = async (
     // Añadir CondicionIVAReceptorId solo si está definido
     if (condicionIVAReceptorId) {
       facturaData.CondicionIVAReceptorId = condicionIVAReceptorId;
+    }
+
+    // Verificar si es una nota de crédito o débito y agregar CbtesAsoc
+    const esNotaCredito = [3, 8, 13].includes(tipoComprobante); // Nota de Crédito A, B, C
+    const esNotaDebito = [2, 7, 12].includes(tipoComprobante); // Nota de Débito A, B, C
+
+    if (esNotaCredito || esNotaDebito) {
+      console.log(
+        "Agregando datos de factura asociada para nota de crédito/débito"
+      );
+
+      // Tipo de factura asociada según el tipo de nota
+      let tipoFacturaAsociada = 1; // Por defecto, asociar a una Factura A
+
+      if (tipoComprobante === 3)
+        tipoFacturaAsociada = 1; // Nota de Crédito A -> Factura A
+      else if (tipoComprobante === 8)
+        tipoFacturaAsociada = 6; // Nota de Crédito B -> Factura B
+      else if (tipoComprobante === 13)
+        tipoFacturaAsociada = 11; // Nota de Crédito C -> Factura C
+      else if (tipoComprobante === 2)
+        tipoFacturaAsociada = 1; // Nota de Débito A -> Factura A
+      else if (tipoComprobante === 7)
+        tipoFacturaAsociada = 6; // Nota de Débito B -> Factura B
+      else if (tipoComprobante === 12) tipoFacturaAsociada = 11; // Nota de Débito C -> Factura C
+
+      // Para producción, buscar la última factura del tipo correspondiente para asociarla
+      let ultimaFacturaAsociada: number = 1;
+
+      try {
+        ultimaFacturaAsociada = await getUltimoComprobante(
+          puntoVenta,
+          tipoFacturaAsociada
+        );
+
+        if (ultimaFacturaAsociada < 1) {
+          ultimaFacturaAsociada = 1;
+        }
+
+        console.log(
+          `Última factura de tipo ${tipoFacturaAsociada} encontrada: ${ultimaFacturaAsociada}`
+        );
+      } catch (error) {
+        console.warn("Error al obtener última factura asociada:", error);
+        // En caso de error, usar 1 como número de factura asociada
+        ultimaFacturaAsociada = 1;
+      }
+
+      // Agregar estructura CbtesAsoc (obligatoria para notas de crédito/débito)
+      facturaData.CbtesAsoc = [
+        {
+          Tipo: tipoFacturaAsociada, // Tipo de comprobante asociado
+          PtoVta: puntoVenta, // Punto de venta de la factura asociada
+          Nro: ultimaFacturaAsociada, // Número de la factura asociada
+        },
+      ];
+
+      console.log(
+        "Datos de facturas asociadas añadidos:",
+        facturaData.CbtesAsoc
+      );
     }
 
     console.log("Datos de factura preparados para AFIP:", facturaData);
