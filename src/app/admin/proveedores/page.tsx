@@ -36,7 +36,7 @@ import { ProveedorCardSkeleton } from "@/components/admin/proveedores/ProveedorC
 interface Proveedor {
   id: number;
   nombre: string;
-  createdAt: Date;
+  creadoEn: Date;
   codigo?: string;
   telefono?: string;
   email?: string;
@@ -189,7 +189,7 @@ function ProveedoresContent() {
                   <Card key={proveedor.id} className="w-full">
                     <CardContent className="p-6">
                       <div className="flex justify-between items-start mb-4">
-                        <h2 className="text-2xl font-semibold text-indigo-gradient">
+                        <h2 className="text-2xl font-semibold text-indigo-gradient line-clamp-2 h-14">
                           {proveedor.nombre}
                         </h2>
                         <Badge
@@ -199,27 +199,42 @@ function ProveedoresContent() {
                           #{proveedor.id}
                         </Badge>
                       </div>
-                      <div className="space-y-2 mb-4">
+                      <div className="space-y-2  min-h-[104px]">
                         <div className="flex items-center">
                           <Building2 className="h-4 w-4 mr-2 text-muted-foreground" />
                           <span>Proveedor</span>
                         </div>
-                        {proveedor.telefono && (
+                        {proveedor.telefono ? (
                           <div className="flex items-center">
                             <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
                             <span>{formatPhoneNumber(proveedor.telefono)}</span>
                           </div>
+                        ) : (
+                          <div className="flex items-center opacity-50">
+                            <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
+                            <span>Sin teléfono</span>
+                          </div>
                         )}
-                        {proveedor.email && (
+                        {/* {proveedor.email ? (
                           <div className="flex items-center">
                             <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
                             <span>{proveedor.email}</span>
                           </div>
-                        )}
+                        ) : (
+                          <div className="flex items-center opacity-50">
+                            <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
+                            <span>Sin email</span>
+                          </div>
+                        )} */}
                         <div className="flex items-center text-sm text-muted-foreground">
                           <span>
                             Creado el:{" "}
-                            {new Date(proveedor.createdAt).toLocaleDateString()}
+                            {proveedor.creadoEn &&
+                            !isNaN(new Date(proveedor.creadoEn).getTime())
+                              ? new Date(
+                                  proveedor.creadoEn
+                                ).toLocaleDateString()
+                              : "Fecha no disponible"}
                           </span>
                         </div>
                       </div>

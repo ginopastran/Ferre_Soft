@@ -21,6 +21,7 @@ import {
   User,
   Shield,
   MessageSquare,
+  Mail,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMemo } from "react";
@@ -169,6 +170,12 @@ export function AppSidebar({ activeUrl, ...props }: AppSidebarProps) {
         title: "Asignar SUPERADMIN",
         url: "/admin/configuracion/asignar-superadmin",
         icon: User,
+      });
+
+      adminItems.push({
+        title: "Emails Permitidos",
+        url: "/admin/configuracion/emails-permitidos",
+        icon: Mail,
       });
     }
 

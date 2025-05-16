@@ -7,7 +7,17 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Filter, List, Plus, X, FolderPlus, Truck, Search } from "lucide-react";
+import {
+  Filter,
+  List,
+  Plus,
+  X,
+  FolderPlus,
+  Truck,
+  Search,
+  Share,
+  Link,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +54,7 @@ function ProductosContent() {
   const [sortField, setSortField] = useState("creadoEn");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [filterRubro, setFilterRubro] = useState("all");
+  const [filterProveedor, setFilterProveedor] = useState("all");
 
   const activeUrl = "/admin/productos";
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -71,6 +82,7 @@ function ProductosContent() {
     const urlSort = getUrlParam("sort");
     const urlOrder = getUrlParam("order");
     const urlRubro = getUrlParam("rubro");
+    const urlProveedor = getUrlParam("proveedor");
     const urlSearch = getUrlParam("search");
 
     if (urlSort) {
@@ -89,6 +101,12 @@ function ProductosContent() {
       setFilterRubro(urlRubro);
     } else {
       setFilterRubro("all");
+    }
+
+    if (urlProveedor) {
+      setFilterProveedor(urlProveedor);
+    } else {
+      setFilterProveedor("all");
     }
 
     if (urlSearch) {
@@ -225,7 +243,10 @@ function ProductosContent() {
       const matchesRubro =
         filterRubro === "all" || product.rubro === filterRubro;
 
-      return matchesSearch && matchesRubro;
+      const matchesProveedor =
+        filterProveedor === "all" || product.proveedor === filterProveedor;
+
+      return matchesSearch && matchesRubro && matchesProveedor;
     });
   };
 
@@ -256,6 +277,7 @@ function ProductosContent() {
     setIsClearingFilters(true);
     setSearchTerm("");
     setFilterRubro("all");
+    setFilterProveedor("all");
     setSortField("creadoEn");
     setSortOrder("desc");
     setCurrentPage(1);
@@ -297,6 +319,30 @@ function ProductosContent() {
           <h2 className="text-3xl font-bold tracking-tight text-indigo-gradient">
             Productos
           </h2>
+          <Button
+            variant="outline"
+            size="sm"
+            className="ml-auto mr-4 bg-indigo-gradient text-white hover:text-white"
+            onClick={() => {
+              const catalogoUrl = `${window.location.origin}/catalogo`;
+              if (navigator.share) {
+                navigator
+                  .share({
+                    title: "Catálogo de Productos",
+                    url: catalogoUrl,
+                  })
+                  .catch((error) =>
+                    toast.error("Error al compartir: " + error)
+                  );
+              } else {
+                navigator.clipboard.writeText(catalogoUrl);
+                toast.success("Enlace copiado al portapapeles");
+              }
+            }}
+          >
+            Compartir catálogo
+            <Link className=" h-4 w-4" />
+          </Button>
         </div>
       </header>
 
@@ -320,6 +366,7 @@ function ProductosContent() {
               <div className="flex items-center gap-2 w-full ">
                 {(searchTerm ||
                   filterRubro !== "all" ||
+                  filterProveedor !== "all" ||
                   sortField !== "creadoEn") && (
                   <Button
                     variant="ghost"
@@ -341,6 +388,9 @@ function ProductosContent() {
                   Filtrar
                   {filterRubro !== "all" && (
                     <span className="ml-1 md:ml-2">{filterRubro}</span>
+                  )}
+                  {filterProveedor !== "all" && (
+                    <span className="ml-1 md:ml-2">{filterProveedor}</span>
                   )}
                 </Button>
 
@@ -437,9 +487,15 @@ function ProductosContent() {
         isOpen={isFilterDialogOpen}
         onClose={() => setIsFilterDialogOpen(false)}
         filterRubro={filterRubro}
-        onFilterChange={(value) => {
-          setFilterRubro(value);
-          setUrlParam("rubro", value === "all" ? null : value);
+        filterProveedor={filterProveedor}
+        onFilterChange={(type, value) => {
+          if (type === "rubro") {
+            setFilterRubro(value);
+            setUrlParam("rubro", value === "all" ? null : value);
+          } else if (type === "proveedor") {
+            setFilterProveedor(value);
+            setUrlParam("proveedor", value === "all" ? null : value);
+          }
           setCurrentPage(1);
         }}
       />

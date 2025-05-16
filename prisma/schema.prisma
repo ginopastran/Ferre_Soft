@@ -201,15 +201,16 @@ model Rubro {
 }
 
 model Proveedor {
-  id            Int      @id @default(autoincrement())
-  nombre        String   @unique
-  codigo        String?  @unique
-  telefono      String?
-  email         String?
-  cuitDni       String?  @unique
-  direccion     String?
-  creadoEn      DateTime @default(now())
-  actualizadoEn DateTime @updatedAt
+  id             Int      @id @default(autoincrement())
+  nombre         String   @unique
+  codigo         String?  @unique
+  nombreContacto String?
+  telefono       String?
+  email          String?
+  cuitDni        String?  @unique
+  direccion      String?
+  creadoEn       DateTime @default(now())
+  actualizadoEn  DateTime @updatedAt
 }
 
 // Modificar el modelo existente de OrdenCompra para convertirlo en Factura
@@ -227,6 +228,7 @@ model Factura {
   clienteId        Int
   vendedorId       Int?
   facturaAnuladaId String? // ID de la factura que esta nota de crédito anula
+  descuento        Float?   @default(0) // Descuento en porcentaje
 
   cliente        Cliente          @relation(fields: [clienteId], references: [id])
   vendedor       Usuario?         @relation(fields: [vendedorId], references: [id])
@@ -288,4 +290,12 @@ model AfipCertificate {
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model EmailPermitido {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  activo    Boolean  @default(true)
+  creadoPor String
+  creadoEn  DateTime @default(now())
 }

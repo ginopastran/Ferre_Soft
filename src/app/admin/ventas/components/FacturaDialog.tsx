@@ -73,6 +73,7 @@ export function FacturaDialog({
   const [clienteSeleccionado, setClienteSeleccionado] =
     useState<Cliente | null>(null);
   const [aumentaStock, setAumentaStock] = useState(false);
+  const [descuento, setDescuento] = useState<string>("");
   const { user } = useAuth();
 
   useEffect(() => {
@@ -189,7 +190,36 @@ export function FacturaDialog({
     setDetalles(newDetalles);
   };
 
-  const total = detalles.reduce((sum, detalle) => sum + detalle.subtotal, 0);
+  const subtotal = detalles.reduce((sum, detalle) => sum + detalle.subtotal, 0);
+  const descuentoValor =
+    subtotal * (descuento === "" ? 0 : parseFloat(descuento) / 100);
+  const total = subtotal - descuentoValor;
+
+  const handleDescuentoChange = (value: string) => {
+    // Si está vacío, mantenerlo vacío (internamente se tratará como 0)
+    if (value === "") {
+      setDescuento("");
+      return;
+    }
+
+    // Remover ceros iniciales (excepto para "0" y "0.")
+    if (value.length > 1 && value.startsWith("0") && !value.startsWith("0.")) {
+      value = value.replace(/^0+/, "");
+    }
+
+    const descuentoPorcentaje = parseFloat(value);
+
+    // Validar que sea un número entre 0 y 100
+    if (
+      isNaN(descuentoPorcentaje) ||
+      descuentoPorcentaje < 0 ||
+      descuentoPorcentaje > 100
+    ) {
+      return;
+    }
+
+    setDescuento(value);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -203,11 +233,15 @@ export function FacturaDialog({
       return;
     }
 
+    // Convertir descuento a número para enviarlo a la API
+    const descuentoNum = descuento === "" ? 0 : parseFloat(descuento);
+
     console.log("Datos a enviar:", {
       clienteId,
       tipoComprobante,
       vendedorId: user?.id,
       aumentaStock,
+      descuento: descuentoNum,
       detalles: detalles.map(({ productoId, cantidad, precioUnitario }) => ({
         productoId,
         cantidad,
@@ -222,6 +256,7 @@ export function FacturaDialog({
         tipoComprobante,
         vendedorId: user?.id,
         aumentaStock,
+        descuento: descuentoNum,
         detalles: detalles.map(({ productoId, cantidad, precioUnitario }) => ({
           productoId,
           cantidad,
@@ -384,9 +419,24 @@ export function FacturaDialog({
               </Select>
             </div>
 
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Descuento (%)</label>
+              <Input
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={descuento}
+                onChange={(e) => handleDescuentoChange(e.target.value)}
+                className="w-full"
+                disabled={isLoading}
+                placeholder="0"
+              />
+            </div>
+
             {(tipoComprobante === "REMITO" ||
               tipoComprobante === "NOTA_CREDITO_REMITO") && (
-              <div className="space-y-2 md:col-span-3">
+              <div className="space-y-2">
                 <label className="text-sm font-medium">
                   Tipo de IVA para{" "}
                   {tipoComprobante === "REMITO"
@@ -505,9 +555,27 @@ export function FacturaDialog({
                 <tfoot>
                   <tr className="border-t">
                     <td colSpan={3} className="p-2 text-right font-semibold">
-                      Total:
+                      Subtotal:
                     </td>
                     <td className="p-2 text-right font-semibold">
+                      {formatCurrency(subtotal)}
+                    </td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td colSpan={3} className="p-2 text-right font-semibold">
+                      Descuento ({descuento || "0"}%):
+                    </td>
+                    <td className="p-2 text-right font-semibold">
+                      {formatCurrency(descuentoValor)}
+                    </td>
+                    <td></td>
+                  </tr>
+                  <tr className="border-t">
+                    <td colSpan={3} className="p-2 text-right font-semibold">
+                      Total Final:
+                    </td>
+                    <td className="p-2 text-right font-semibold text-lg text-indigo-600">
                       {formatCurrency(total)}
                     </td>
                     <td></td>

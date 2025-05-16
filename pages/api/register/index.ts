@@ -19,6 +19,9 @@ export default async function handler(
       const userCount = await prisma.usuario.count();
       const isFirstUser = userCount === 0;
 
+      // Verificar si el email es de un superadmin (para permitir siempre su registro)
+      const isSuperAdminEmail = email === process.env.SUPER_ADMIN_EMAIL;
+
       if (isFirstUser) {
         // Crear roles y sucursal para el primer usuario
         const [roleAdmin, roleVendedor, roleSuperAdmin, sucursal] =
@@ -90,6 +93,19 @@ export default async function handler(
           return res.status(400).json({
             message: "Ya existe un usuario con ese email o DNI",
           });
+        }
+
+        // Verificar si el email está en la lista de permitidos (o es superadmin)
+        if (!isSuperAdminEmail) {
+          const emailPermitido = await prisma.emailPermitido.findUnique({
+            where: { email, activo: true },
+          });
+
+          if (!emailPermitido) {
+            return res.status(403).json({
+              message: "Este email no está autorizado para registrarse",
+            });
+          }
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);

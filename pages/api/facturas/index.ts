@@ -135,7 +135,8 @@ export default async function handler(
         headers: req.headers,
       });
 
-      const { clienteId, tipoComprobante, detalles, vendedorId } = req.body;
+      const { clienteId, tipoComprobante, detalles, vendedorId, descuento } =
+        req.body;
 
       // Log de los datos extraídos
       console.log("Datos extraídos:", {
@@ -143,6 +144,7 @@ export default async function handler(
         tipoComprobante,
         detallesLength: detalles?.length,
         vendedorId,
+        descuento,
       });
 
       // Validaciones mejoradas
@@ -181,7 +183,7 @@ export default async function handler(
       console.log("Detalles de la factura:", detalles);
 
       // Calcular total
-      const total = Number(
+      const subtotal = Number(
         detalles
           .reduce(
             (sum, detalle) => sum + detalle.cantidad * detalle.precioUnitario,
@@ -189,7 +191,19 @@ export default async function handler(
           )
           .toFixed(2)
       );
-      console.log("Total calculado:", total);
+
+      // Aplicar descuento si existe
+      const descuentoValor = descuento
+        ? subtotal * (Number(descuento) / 100)
+        : 0;
+      const total = Number((subtotal - descuentoValor).toFixed(2));
+
+      console.log("Total calculado:", {
+        subtotal,
+        descuento: descuento || 0,
+        descuentoValor,
+        total,
+      });
 
       // Generar número de factura
       let numeroFactura = "";
@@ -596,6 +610,7 @@ export default async function handler(
                   total,
                   pagado: 0,
                   estado: "PENDIENTE",
+                  descuento: descuento ? Number(descuento) : 0,
                   // Agregar datos de AFIP si existen
                   ...datosAdicionalesAfip,
                   detalles: {
@@ -796,6 +811,7 @@ export default async function handler(
                 total,
                 pagado: 0,
                 estado: "PENDIENTE",
+                descuento: descuento ? Number(descuento) : 0,
                 // Agregar datos de AFIP si existen
                 ...datosAdicionalesAfip,
                 detalles: {

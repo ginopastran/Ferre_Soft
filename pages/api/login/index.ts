@@ -55,6 +55,29 @@ export default async function handler(
         return res.status(404).json({ message: "Usuario no encontrado" });
       }
 
+      // Verificar si el usuario es superadmin o si su email está en la lista de permitidos
+      const isSuperAdmin = user.rol?.nombre === "SUPERADMIN";
+      const isSuperAdminEmail = email === process.env.SUPER_ADMIN_EMAIL;
+
+      if (!isSuperAdmin && !isSuperAdminEmail) {
+        try {
+          // Verificar si el email está en la lista de permitidos
+          const emailPermitido = await prisma.emailPermitido.findUnique({
+            where: { email, activo: true },
+          });
+
+          if (!emailPermitido) {
+            return res.status(403).json({
+              message: "Este email no está autorizado para acceder",
+            });
+          }
+        } catch (error) {
+          // Si hay un error al verificar el email permitido, continuar con la autenticación
+          // Este bloque try-catch es para manejar la posibilidad de que la tabla no exista aún
+          console.warn("Error al verificar email permitido:", error);
+        }
+      }
+
       const isValid = await bcrypt.compare(password, user.password);
       if (!isValid) {
         return res.status(401).json({ message: "Credenciales incorrectas" });

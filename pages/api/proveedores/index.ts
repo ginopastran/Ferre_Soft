@@ -12,7 +12,25 @@ export default async function handler(
           nombre: "asc",
         },
       });
-      return res.status(200).json(proveedores);
+
+      // Asegurar que todos los proveedores tengan una fecha de creación válida
+      const proveedoresConFecha = proveedores.map((proveedor) => {
+        if (!proveedor.creadoEn) {
+          // Si no hay fecha, asignar la fecha actual
+          return {
+            ...proveedor,
+            creadoEn: new Date(),
+            createdAt: new Date(), // Para compatibilidad con la interfaz
+          };
+        }
+        // Asegurar que createdAt esté disponible para la interfaz
+        return {
+          ...proveedor,
+          createdAt: proveedor.creadoEn,
+        };
+      });
+
+      return res.status(200).json(proveedoresConFecha);
     } catch (error) {
       console.error("Error al obtener proveedores:", error);
       return res.status(500).json({ error: "Error al obtener proveedores" });
@@ -21,10 +39,20 @@ export default async function handler(
 
   if (req.method === "POST") {
     try {
+      const data = {
+        ...req.body,
+        creadoEn: new Date(),
+        actualizadoEn: new Date(),
+      };
+
       const proveedor = await prisma.proveedor.create({
-        data: req.body,
+        data,
       });
-      return res.status(201).json(proveedor);
+
+      return res.status(201).json({
+        ...proveedor,
+        createdAt: proveedor.creadoEn, // Para compatibilidad con la interfaz
+      });
     } catch (error) {
       console.error("Error al crear proveedor:", error);
       return res.status(500).json({ error: "Error al crear proveedor" });
