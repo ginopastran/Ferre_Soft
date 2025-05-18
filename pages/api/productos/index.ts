@@ -7,7 +7,7 @@ import { uploadImage } from "@/lib/cloudinary";
 export const config = {
   api: {
     bodyParser: {
-      sizeLimit: "2mb",
+      sizeLimit: "3mb",
     },
   },
 };

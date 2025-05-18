@@ -19,6 +19,7 @@ import { Info, Plus, Trash2 } from "lucide-react";
 import { ProductSearchDialog } from "./ProductSearchDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatCurrency } from "@/lib/utils/format";
+import { ClienteSearchDialog } from "./ClienteSearchDialog";
 
 interface FacturaDialogProps {
   open: boolean;
@@ -75,6 +76,7 @@ export function FacturaDialog({
   const [aumentaStock, setAumentaStock] = useState(false);
   const [descuento, setDescuento] = useState<string>("");
   const { user } = useAuth();
+  const [isClienteSearchOpen, setIsClienteSearchOpen] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -332,12 +334,9 @@ export function FacturaDialog({
     ]);
   };
 
-  const handleClienteChange = (id: string) => {
-    setClienteId(id);
-    const cliente = clientes.find((c) => c.id.toString() === id);
-    setClienteSeleccionado(cliente || null);
-    // Resetear el tipo de comprobante cuando cambia el cliente
-    setTipoComprobante("");
+  const handleClienteSelect = (cliente: Cliente) => {
+    setClienteId(cliente.id.toString());
+    setClienteSeleccionado(cliente);
   };
 
   return (
@@ -358,22 +357,18 @@ export function FacturaDialog({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Cliente</label>
-              <Select
-                value={clienteId}
-                onValueChange={handleClienteChange}
-                disabled={isLoading}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccione un cliente" />
-                </SelectTrigger>
-                <SelectContent>
-                  {clientes.map((cliente) => (
-                    <SelectItem key={cliente.id} value={cliente.id.toString()}>
-                      {cliente.nombre} - {cliente.codigo}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setIsClienteSearchOpen(true)}
+                >
+                  {clienteSeleccionado
+                    ? `${clienteSeleccionado.nombre} - ${clienteSeleccionado.codigo}`
+                    : "Seleccione un cliente"}
+                </Button>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -522,7 +517,6 @@ export function FacturaDialog({
                           <Input
                             type="number"
                             min="1"
-                            max={detalle.producto.stock}
                             value={detalle.cantidad}
                             onChange={(e) =>
                               handleCantidadChange(index, e.target.value)
@@ -613,7 +607,13 @@ export function FacturaDialog({
           onOpenChange={setIsProductSearchOpen}
           onProductSelect={handleProductSelect}
           listaPrecio={listaPrecio}
-          productosAgregados={detalles.map((detalle) => detalle.productoId)}
+          productosAgregados={detalles.map((d) => d.productoId)}
+        />
+
+        <ClienteSearchDialog
+          open={isClienteSearchOpen}
+          onOpenChange={setIsClienteSearchOpen}
+          onClienteSelect={handleClienteSelect}
         />
       </DialogContent>
     </Dialog>

@@ -41,7 +41,7 @@ import { ProductTableSkeleton } from "@/components/admin/productos/ProductTableS
 import { ProductCard } from "@/components/admin/productos/ProductCard";
 import { ProductsGridSkeleton } from "@/components/admin/productos/ProductsGridSkeleton";
 import { ProductDialog, ProductForm } from "./components/ProductDialog";
-import { RubroDialog } from "./components/RubroDialog";
+import { RubroListDialog } from "./components/RubroListDialog";
 import { ProveedorDialog } from "./components/ProveedorDialog";
 
 function ProductosContent() {
@@ -293,23 +293,6 @@ function ProductosContent() {
     indexOfLastProduct
   );
 
-  const handleCreateRubro = async (data: { nombre: string }) => {
-    try {
-      const response = await fetch("/api/rubros", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) throw new Error("Error al crear rubro");
-      toast.success("Rubro creado exitosamente");
-    } catch (error) {
-      console.error("Error:", error);
-      toast.error("Error al crear el rubro");
-      throw error;
-    }
-  };
-
   return (
     <>
       <header className="flex h-12 md:h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
@@ -500,10 +483,9 @@ function ProductosContent() {
         }}
       />
 
-      <RubroDialog
+      <RubroListDialog
         open={isRubroDialogOpen}
         onOpenChange={setIsRubroDialogOpen}
-        onSubmit={handleCreateRubro}
       />
     </>
   );

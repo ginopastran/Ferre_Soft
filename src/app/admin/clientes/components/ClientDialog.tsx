@@ -18,13 +18,13 @@ import { Cliente } from "@prisma/client";
 import { formatDNI, formatPhoneNumber } from "@/lib/utils/format";
 
 const situacionesIVA = [
-  "IVA Responsable Inscripto",
-  "IVA Responsable no Inscripto",
-  "IVA no Responsable",
-  "IVA Sujeto Exento",
-  "Consumidor Final",
-  "Responsable Monotributo",
-  "Sujeto no Categorizado",
+  "RESPONSABLE_INSCRIPTO",
+  "IVA_RESPONSABLE_NO_INSCRIPTO",
+  "IVA_NO_RESPONSABLE",
+  "IVA_SUJETO_EXENTO",
+  "CONSUMIDOR_FINAL",
+  "MONOTRIBUTISTA",
+  "SUJETO_NO_CATEGORIZADO",
 ];
 
 export type ClienteForm = Omit<Cliente, "id" | "creadoEn"> & {

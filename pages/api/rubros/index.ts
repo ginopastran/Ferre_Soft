@@ -31,5 +31,31 @@ export default async function handler(
     }
   }
 
-  return res.status(405).json({ message: "Método no permitido" });
+  if (req.method === "PUT") {
+    try {
+      const { nombre, descripcion, nombreAnterior } = req.body;
+
+      // Primero actualizamos el rubro
+      const rubroActualizado = await prisma.rubro.update({
+        where: { nombre: nombreAnterior },
+        data: {
+          nombre,
+          descripcion,
+        },
+      });
+
+      // Luego actualizamos todos los productos que usan este rubro
+      await prisma.producto.updateMany({
+        where: { rubro: nombreAnterior },
+        data: { rubro: nombre },
+      });
+
+      return res.status(200).json(rubroActualizado);
+    } catch (error) {
+      console.error("Error al actualizar rubro:", error);
+      return res.status(500).json({ error: "Error al actualizar rubro" });
+    }
+  }
+
+  return res.status(405).json({ error: "Método no permitido" });
 }

@@ -208,7 +208,6 @@ export default async function handler(
       // Generar número de factura
       let numeroFactura = "";
       let datosAfip: AfipResponse | null = null;
-      let datosAdicionalesAfip = {};
 
       // Si es un remito, generar un número de remito
       if (tipoComprobante === "REMITO") {
@@ -227,177 +226,8 @@ export default async function handler(
           nuevoNumero = parseInt(ultimoRemito.numero.substring(2)) + 1;
         }
         numeroFactura = `R-${nuevoNumero.toString().padStart(8, "0")}`;
-      }
-      // Si es una nota de crédito, generar un número de nota de crédito
-      else if (tipoComprobante.startsWith("NOTA_CREDITO")) {
-        const ultimaNotaCredito = await prisma.factura.findFirst({
-          where: {
-            tipoComprobante,
-          },
-          orderBy: {
-            numero: "desc",
-          },
-        });
-
-        // Generar un nuevo número de nota de crédito
-        let nuevoNumero = 1;
-        const prefijo = tipoComprobante === "NOTA_CREDITO_A" ? "NCA-" : "NCB-";
-        if (ultimaNotaCredito && ultimaNotaCredito.numero.startsWith(prefijo)) {
-          nuevoNumero = parseInt(ultimaNotaCredito.numero.substring(4)) + 1;
-        }
-        numeroFactura = `${prefijo}${nuevoNumero.toString().padStart(8, "0")}`;
-
-        // Para notas de crédito, obtener datos de AFIP
-        if (
-          tipoComprobante === "NOTA_CREDITO_A" ||
-          tipoComprobante === "NOTA_CREDITO_B"
-        ) {
-          try {
-            // Verificar conexión con AFIP
-            let afipConectado = false;
-
-            // Obtener las funciones de AFIP
-            const afipUtils = await getAfipUtils();
-
-            // En producción, evitar verificar conexión si se especificó bypass
-            const shouldBypassAfip =
-              process.env.NODE_ENV === "production" &&
-              process.env.BYPASS_AFIP_IN_PRODUCTION === "true";
-
-            if (!shouldBypassAfip) {
-              afipConectado = await afipUtils.verificarConexion();
-              console.log(
-                "Estado de conexión con AFIP para Nota de Crédito:",
-                afipConectado
-              );
-            } else {
-              console.log(
-                "Saltando verificación de AFIP en producción (modo bypass)"
-              );
-            }
-
-            // Proceder con la generación de la Nota de Crédito electrónica
-            if (afipConectado && !shouldBypassAfip) {
-              console.log("Obteniendo datos de AFIP para nota de crédito:", {
-                tipoComprobante,
-                numeroFactura,
-                clienteId,
-              });
-
-              // Obtener detalles completos para enviar a AFIP
-              const detallesCompletos = detalles.map((detalle) => ({
-                ...detalle,
-                subtotal:
-                  Number(detalle.cantidad) * Number(detalle.precioUnitario),
-              }));
-
-              // Crear objeto de nota de crédito para AFIP
-              const notaCreditoParaAfip = {
-                numero: numeroFactura,
-                tipoComprobante,
-                total,
-              };
-
-              // Obtener datos del cliente para AFIP
-              const cliente = await prisma.cliente.findUnique({
-                where: { id: Number(clienteId) },
-              });
-
-              if (!cliente) {
-                throw new Error("Cliente no encontrado");
-              }
-
-              // Llamar a la función para generar nota de crédito electrónica
-              try {
-                datosAfip = await afipUtils.generarFacturaElectronica(
-                  notaCreditoParaAfip,
-                  cliente,
-                  detallesCompletos
-                );
-
-                console.log(
-                  "Datos obtenidos de AFIP para nota de crédito:",
-                  datosAfip
-                );
-              } catch (afipError) {
-                // Verificar si es un error específico que debemos manejar de forma especial
-                const errorMsg =
-                  afipError instanceof Error
-                    ? afipError.message
-                    : String(afipError);
-
-                // Errores que requieren atención especial
-                if (
-                  errorMsg.includes(
-                    "Debe emitir una factura de crédito electrónica (FCE)"
-                  )
-                ) {
-                  return res.status(400).json({
-                    error: "Error de validación AFIP",
-                    message: "Este cliente requiere factura MiPyME",
-                    details: errorMsg,
-                  });
-                } else if (errorMsg.includes("CUIT")) {
-                  return res.status(400).json({
-                    error: "Error de validación AFIP",
-                    message:
-                      "El CUIT del cliente no es válido o no está autorizado",
-                    details: errorMsg,
-                  });
-                } else if (errorMsg.includes("Comprobante ya registrado")) {
-                  return res.status(400).json({
-                    error: "Error de validación AFIP",
-                    message: "El comprobante ya fue registrado anteriormente",
-                    details: errorMsg,
-                  });
-                }
-
-                // Re-lanzar el error para el catch general
-                throw afipError;
-              }
-            } else {
-              console.log(
-                "No se obtuvieron datos de AFIP para nota de crédito:",
-                {
-                  tipoComprobante,
-                  afipConectado,
-                  shouldBypassAfip,
-                }
-              );
-            }
-          } catch (error) {
-            console.error(
-              "Error al obtener datos de AFIP para nota de crédito:",
-              error
-            );
-
-            // Manejamos el error según su naturaleza
-            const errorMsg =
-              error instanceof Error ? error.message : String(error);
-
-            // Para ciertos errores, devolvemos respuesta inmediata
-            if (
-              errorMsg.includes("validación") ||
-              errorMsg.includes("CUIT") ||
-              errorMsg.includes("MiPyME") ||
-              errorMsg.includes("certificados")
-            ) {
-              return res.status(400).json({
-                error: "Error al procesar nota de crédito con AFIP",
-                message: errorMsg,
-              });
-            }
-
-            // Para otros errores, continuamos y registramos la nota de crédito sin datos de AFIP
-            console.warn(
-              "Continuando sin datos de AFIP para nota de crédito debido a error:",
-              errorMsg
-            );
-          }
-        }
-      }
-      // Si es una factura A o B, generar un número de factura y obtener datos de AFIP
-      else {
+      } else {
+        // Para facturas A o B
         const ultimaFactura = await prisma.factura.findFirst({
           where: {
             tipoComprobante,
@@ -414,312 +244,25 @@ export default async function handler(
           nuevoNumero = parseInt(ultimaFactura.numero.substring(3)) + 1;
         }
         numeroFactura = `${prefijo}${nuevoNumero.toString().padStart(8, "0")}`;
-
-        // Verificar conexión con AFIP
-        let afipConectado = false;
-        try {
-          // Obtener las funciones de AFIP
-          const afipUtils = await getAfipUtils();
-
-          // En producción, evitar verificar conexión si se especificó bypass
-          const shouldBypassAfip =
-            process.env.NODE_ENV === "production" &&
-            process.env.BYPASS_AFIP_IN_PRODUCTION === "true";
-
-          if (!shouldBypassAfip) {
-            afipConectado = await afipUtils.verificarConexion();
-            console.log("Estado de conexión con AFIP:", afipConectado);
-          } else {
-            console.log(
-              "Saltando verificación de AFIP en producción (modo bypass)"
-            );
-          }
-        } catch (afipError) {
-          console.error("Error al verificar conexión con AFIP:", afipError);
-          // No fallamos la creación de factura, solo registramos el error
-        }
-
-        // Obtener datos de AFIP solo para facturas A y B
-        try {
-          // En producción, bypass de AFIP si no hay certificados configurados
-          const shouldBypassAfip =
-            process.env.NODE_ENV === "production" &&
-            process.env.BYPASS_AFIP_IN_PRODUCTION === "true";
-
-          if (
-            (tipoComprobante === "FACTURA_A" ||
-              tipoComprobante === "FACTURA_B") &&
-            afipConectado &&
-            !shouldBypassAfip
-          ) {
-            console.log("Obteniendo datos de AFIP para factura:", {
-              tipoComprobante,
-              numeroFactura,
-              clienteId,
-            });
-
-            // Obtener detalles completos para enviar a AFIP
-            const detallesCompletos = detalles.map((detalle) => ({
-              ...detalle,
-              subtotal:
-                Number(detalle.cantidad) * Number(detalle.precioUnitario),
-            }));
-
-            // Crear objeto de factura para AFIP
-            const facturaParaAfip = {
-              numero: numeroFactura,
-              tipoComprobante,
-              total,
-            };
-
-            // Obtener datos del cliente para AFIP
-            const cliente = await prisma.cliente.findUnique({
-              where: { id: Number(clienteId) },
-            });
-
-            if (!cliente) {
-              throw new Error("Cliente no encontrado");
-            }
-
-            // Llamar a la función para generar factura electrónica
-            try {
-              const afipUtils = await getAfipUtils();
-              datosAfip = await afipUtils.generarFacturaElectronica(
-                facturaParaAfip,
-                cliente,
-                detallesCompletos
-              );
-
-              console.log("Datos obtenidos de AFIP:", datosAfip);
-            } catch (afipError) {
-              // Verificar si es un error específico que debemos manejar de forma especial
-              const errorMsg =
-                afipError instanceof Error
-                  ? afipError.message
-                  : String(afipError);
-
-              // Errores que requieren atención especial
-              if (
-                errorMsg.includes(
-                  "Debe emitir una factura de crédito electrónica (FCE)"
-                )
-              ) {
-                return res.status(400).json({
-                  error: "Error de validación AFIP",
-                  message: "Este cliente requiere factura MiPyME",
-                  details: errorMsg,
-                });
-              } else if (errorMsg.includes("CUIT")) {
-                return res.status(400).json({
-                  error: "Error de validación AFIP",
-                  message:
-                    "El CUIT del cliente no es válido o no está autorizado",
-                  details: errorMsg,
-                });
-              } else if (errorMsg.includes("Comprobante ya registrado")) {
-                return res.status(400).json({
-                  error: "Error de validación AFIP",
-                  message: "El comprobante ya fue registrado anteriormente",
-                  details: errorMsg,
-                });
-              }
-
-              // Re-lanzar el error para el catch general
-              throw afipError;
-            }
-          } else {
-            console.log("No se obtuvieron datos de AFIP:", {
-              tipoComprobante,
-              afipConectado,
-              shouldBypassAfip,
-            });
-          }
-        } catch (error) {
-          console.error("Error al obtener datos de AFIP:", error);
-
-          // Manejamos el error según su naturaleza
-          const errorMsg =
-            error instanceof Error ? error.message : String(error);
-
-          // Para ciertos errores, devolvemos respuesta inmediata
-          if (
-            errorMsg.includes("validación") ||
-            errorMsg.includes("CUIT") ||
-            errorMsg.includes("MiPyME") ||
-            errorMsg.includes("certificados")
-          ) {
-            return res.status(400).json({
-              error: "Error al procesar con AFIP",
-              message: errorMsg,
-            });
-          }
-
-          // Para otros errores, continuamos y registramos la factura sin datos de AFIP
-          console.warn(
-            "Continuando sin datos de AFIP debido a error:",
-            errorMsg
-          );
-        }
-
-        // Crear factura para remitos y notas de crédito
-        if (
-          tipoComprobante === "REMITO" ||
-          tipoComprobante.startsWith("NOTA_CREDITO")
-        ) {
-          try {
-            const nuevaFactura = await prisma.$transaction(async (tx) => {
-              // Verificar stock solo si no es una nota de crédito
-              if (!req.body.aumentaStock) {
-                for (const detalle of detalles) {
-                  const producto = await tx.producto.findUnique({
-                    where: { id: Number(detalle.productoId) },
-                    select: { id: true, stock: true, descripcion: true },
-                  });
-
-                  if (!producto || producto.stock < detalle.cantidad) {
-                    throw new Error(
-                      `Stock insuficiente para el producto ${
-                        producto?.descripcion || detalle.productoId
-                      }`
-                    );
-                  }
-                }
-              }
-
-              // Crear datos adicionales para AFIP si existen
-              const datosAdicionalesAfip = datosAfip
-                ? {
-                    cae: datosAfip.cae,
-                    vencimientoCae: datosAfip.vencimientoCae,
-                    afipComprobante: datosAfip.numeroComprobante,
-                  }
-                : {};
-
-              console.log(
-                "Datos adicionales de AFIP para guardado:",
-                datosAdicionalesAfip
-              );
-
-              const factura = await tx.factura.create({
-                data: {
-                  numero: numeroFactura,
-                  fecha: new Date(),
-                  clienteId: Number(clienteId),
-                  vendedorId: Number(vendedorId),
-                  tipoComprobante,
-                  total,
-                  pagado: 0,
-                  estado: "PENDIENTE",
-                  descuento: descuento ? Number(descuento) : 0,
-                  // Agregar datos de AFIP si existen
-                  ...datosAdicionalesAfip,
-                  detalles: {
-                    create: detalles.map((detalle) => ({
-                      productoId: Number(detalle.productoId),
-                      cantidad: Number(detalle.cantidad),
-                      precioUnitario: Number(
-                        Number(detalle.precioUnitario).toFixed(2)
-                      ),
-                      subtotal: Number(
-                        (
-                          Number(detalle.cantidad) *
-                          Number(detalle.precioUnitario)
-                        ).toFixed(2)
-                      ),
-                    })),
-                  },
-                },
-                include: {
-                  cliente: {
-                    select: {
-                      nombre: true,
-                    },
-                  },
-                  detalles: {
-                    include: {
-                      producto: true,
-                    },
-                  },
-                },
-              });
-
-              // Actualizar stock
-              for (const detalle of detalles) {
-                await tx.producto.update({
-                  where: { id: Number(detalle.productoId) },
-                  data: {
-                    stock: {
-                      // Si es una nota de crédito, incrementar el stock en lugar de decrementarlo
-                      [req.body.aumentaStock ? "increment" : "decrement"]:
-                        Number(detalle.cantidad),
-                    },
-                  },
-                });
-              }
-
-              return factura;
-            });
-
-            return res.status(201).json({
-              ...nuevaFactura,
-              afip: datosAfip
-                ? {
-                    cae: (datosAfip as AfipResponse).cae,
-                    vencimientoCae: (datosAfip as AfipResponse).vencimientoCae,
-                    numeroComprobante: (datosAfip as AfipResponse)
-                      .numeroComprobante,
-                  }
-                : null,
-            });
-          } catch (error) {
-            // Usar una forma más segura de registrar el error
-            console.error(
-              "Error en la creación de factura:",
-              error instanceof Error
-                ? { message: error.message, stack: error.stack }
-                : String(error)
-            );
-
-            let errorMessage = "Error desconocido";
-            if (error instanceof Error) {
-              errorMessage = error.message;
-            } else if (error !== null && error !== undefined) {
-              errorMessage = String(error);
-            }
-
-            return res.status(500).json({
-              error: "Error al crear la factura",
-              details: errorMessage,
-            });
-          }
-        }
       }
 
-      // Verificar que el número de factura sea único
-      const verificarNumeroUnico = async (numero: string): Promise<string> => {
-        const existe = await prisma.factura.findUnique({
-          where: { numero },
-          select: { id: true },
-        });
+      // Verificar conexión con AFIP
+      let afipConectado = false;
+      try {
+        const afipUtils = await getAfipUtils();
+        const shouldBypassAfip =
+          process.env.NODE_ENV === "production" &&
+          process.env.BYPASS_AFIP_IN_PRODUCTION === "true";
 
-        if (existe) {
-          // Si ya existe, incrementar el número y verificar de nuevo
-          const num = parseInt(numero.substring(1));
-          const nuevoNumero = `F${String(num + 1).padStart(8, "0")}`;
-          console.log(
-            `Número ${numero} ya existe, intentando con ${nuevoNumero}`
-          );
-          return verificarNumeroUnico(nuevoNumero);
+        if (!shouldBypassAfip) {
+          afipConectado = await afipUtils.verificarConexion();
+          console.log("Estado de conexión con AFIP:", afipConectado);
         }
+      } catch (afipError) {
+        console.error("Error al verificar conexión con AFIP:", afipError);
+      }
 
-        return numero;
-      };
-
-      // Asegurar que el número sea único
-      numeroFactura = await verificarNumeroUnico(numeroFactura);
-      console.log("Número de factura único confirmado:", numeroFactura);
-
-      // Obtener datos del cliente para AFIP
+      // Obtener datos del cliente
       const cliente = await prisma.cliente.findUnique({
         where: { id: Number(clienteId) },
       });
@@ -762,143 +305,178 @@ export default async function handler(
         }
       }
 
-      // Crear factura para remitos y notas de crédito
+      // Obtener datos de AFIP para facturas A y B
       if (
-        tipoComprobante === "REMITO" ||
-        tipoComprobante.startsWith("NOTA_CREDITO")
+        (tipoComprobante === "FACTURA_A" || tipoComprobante === "FACTURA_B") &&
+        afipConectado
       ) {
         try {
-          const nuevaFactura = await prisma.$transaction(async (tx) => {
-            // Verificar stock solo si no es una nota de crédito
-            if (!req.body.aumentaStock) {
-              for (const detalle of detalles) {
-                const producto = await tx.producto.findUnique({
-                  where: { id: Number(detalle.productoId) },
-                  select: { id: true, stock: true, descripcion: true },
-                });
+          console.log("Obteniendo datos de AFIP para factura:", {
+            tipoComprobante,
+            numeroFactura,
+            clienteId,
+          });
 
-                if (!producto || producto.stock < detalle.cantidad) {
-                  throw new Error(
-                    `Stock insuficiente para el producto ${
-                      producto?.descripcion || detalle.productoId
-                    }`
-                  );
-                }
+          const detallesCompletos = detalles.map((detalle) => ({
+            ...detalle,
+            subtotal: Number(detalle.cantidad) * Number(detalle.precioUnitario),
+          }));
+
+          const facturaParaAfip = {
+            numero: numeroFactura,
+            tipoComprobante,
+            total,
+          };
+
+          const afipUtils = await getAfipUtils();
+          datosAfip = await afipUtils.generarFacturaElectronica(
+            facturaParaAfip,
+            cliente,
+            detallesCompletos
+          );
+
+          console.log("Datos obtenidos de AFIP:", datosAfip);
+        } catch (afipError) {
+          const errorMsg =
+            afipError instanceof Error ? afipError.message : String(afipError);
+
+          if (
+            errorMsg.includes(
+              "Debe emitir una factura de crédito electrónica (FCE)"
+            )
+          ) {
+            return res.status(400).json({
+              error: "Error de validación AFIP",
+              message: "Este cliente requiere factura MiPyME",
+              details: errorMsg,
+            });
+          } else if (errorMsg.includes("CUIT")) {
+            return res.status(400).json({
+              error: "Error de validación AFIP",
+              message: "El CUIT del cliente no es válido o no está autorizado",
+              details: errorMsg,
+            });
+          } else if (errorMsg.includes("Comprobante ya registrado")) {
+            return res.status(400).json({
+              error: "Error de validación AFIP",
+              message: "El comprobante ya fue registrado anteriormente",
+              details: errorMsg,
+            });
+          }
+
+          throw afipError;
+        }
+      }
+
+      // Crear la factura en la base de datos
+      try {
+        const nuevaFactura = await prisma.$transaction(async (tx) => {
+          // Datos adicionales de AFIP
+          const datosAdicionalesAfip = datosAfip
+            ? {
+                cae: datosAfip.cae,
+                vencimientoCae: datosAfip.vencimientoCae,
+                afipComprobante: datosAfip.numeroComprobante,
               }
-            }
+            : {};
 
-            // Crear datos adicionales para AFIP si existen
-            const datosAdicionalesAfip = datosAfip
-              ? {
-                  cae: datosAfip.cae,
-                  vencimientoCae: datosAfip.vencimientoCae,
-                  afipComprobante: datosAfip.numeroComprobante,
-                }
-              : {};
+          console.log(
+            "Datos adicionales de AFIP para guardado:",
+            datosAdicionalesAfip
+          );
 
-            console.log(
-              "Datos adicionales de AFIP para guardado:",
-              datosAdicionalesAfip
-            );
-
-            const factura = await tx.factura.create({
-              data: {
-                numero: numeroFactura,
-                fecha: new Date(),
-                clienteId: Number(clienteId),
-                vendedorId: Number(vendedorId),
-                tipoComprobante,
-                total,
-                pagado: 0,
-                estado: "PENDIENTE",
-                descuento: descuento ? Number(descuento) : 0,
-                // Agregar datos de AFIP si existen
-                ...datosAdicionalesAfip,
-                detalles: {
-                  create: detalles.map((detalle) => ({
-                    productoId: Number(detalle.productoId),
-                    cantidad: Number(detalle.cantidad),
-                    precioUnitario: Number(
-                      Number(detalle.precioUnitario).toFixed(2)
-                    ),
-                    subtotal: Number(
-                      (
-                        Number(detalle.cantidad) *
-                        Number(detalle.precioUnitario)
-                      ).toFixed(2)
-                    ),
-                  })),
+          // Crear la factura
+          const factura = await tx.factura.create({
+            data: {
+              numero: numeroFactura,
+              fecha: new Date(),
+              clienteId: Number(clienteId),
+              vendedorId: Number(vendedorId),
+              tipoComprobante,
+              total,
+              pagado: 0,
+              estado: "PENDIENTE",
+              descuento: descuento ? Number(descuento) : 0,
+              ...datosAdicionalesAfip,
+              detalles: {
+                create: detalles.map((detalle) => ({
+                  productoId: Number(detalle.productoId),
+                  cantidad: Number(detalle.cantidad),
+                  precioUnitario: Number(
+                    Number(detalle.precioUnitario).toFixed(2)
+                  ),
+                  subtotal: Number(
+                    (
+                      Number(detalle.cantidad) * Number(detalle.precioUnitario)
+                    ).toFixed(2)
+                  ),
+                })),
+              },
+            },
+            include: {
+              cliente: {
+                select: {
+                  nombre: true,
                 },
               },
-              include: {
-                cliente: {
-                  select: {
-                    nombre: true,
-                  },
+              detalles: {
+                include: {
+                  producto: true,
                 },
-                detalles: {
-                  include: {
-                    producto: true,
-                  },
+              },
+            },
+          });
+
+          // Actualizar stock
+          for (const detalle of detalles) {
+            await tx.producto.update({
+              where: { id: Number(detalle.productoId) },
+              data: {
+                stock: {
+                  [req.body.aumentaStock ? "increment" : "decrement"]: Number(
+                    detalle.cantidad
+                  ),
                 },
               },
             });
-
-            // Actualizar stock
-            for (const detalle of detalles) {
-              await tx.producto.update({
-                where: { id: Number(detalle.productoId) },
-                data: {
-                  stock: {
-                    // Si es una nota de crédito, incrementar el stock en lugar de decrementarlo
-                    [req.body.aumentaStock ? "increment" : "decrement"]: Number(
-                      detalle.cantidad
-                    ),
-                  },
-                },
-              });
-            }
-
-            return factura;
-          });
-
-          return res.status(201).json({
-            ...nuevaFactura,
-            afip: datosAfip
-              ? {
-                  cae: (datosAfip as AfipResponse).cae,
-                  vencimientoCae: (datosAfip as AfipResponse).vencimientoCae,
-                  numeroComprobante: (datosAfip as AfipResponse)
-                    .numeroComprobante,
-                }
-              : null,
-          });
-        } catch (error) {
-          // Usar una forma más segura de registrar el error
-          console.error(
-            "Error en la creación de factura:",
-            error instanceof Error
-              ? { message: error.message, stack: error.stack }
-              : String(error)
-          );
-
-          let errorMessage = "Error desconocido";
-          if (error instanceof Error) {
-            errorMessage = error.message;
-          } else if (error !== null && error !== undefined) {
-            errorMessage = String(error);
           }
 
-          return res.status(500).json({
-            error: "Error al crear la factura",
-            details: errorMessage,
-          });
+          return factura;
+        });
+
+        return res.status(201).json({
+          ...nuevaFactura,
+          afip: datosAfip
+            ? {
+                cae: datosAfip.cae,
+                vencimientoCae: datosAfip.vencimientoCae,
+                numeroComprobante: datosAfip.numeroComprobante,
+              }
+            : null,
+        });
+      } catch (error) {
+        console.error(
+          "Error en la creación de factura:",
+          error instanceof Error
+            ? { message: error.message, stack: error.stack }
+            : String(error)
+        );
+
+        let errorMessage = "Error desconocido";
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        } else if (error !== null && error !== undefined) {
+          errorMessage = String(error);
         }
+
+        return res.status(500).json({
+          error: "Error al crear la factura",
+          details: errorMessage,
+        });
       }
     } catch (error) {
-      // Usar una forma más segura de registrar el error
       console.error(
-        "Error en la creación de factura:",
+        "Error en el handler POST:",
         error instanceof Error
           ? { message: error.message, stack: error.stack }
           : String(error)
@@ -912,7 +490,7 @@ export default async function handler(
       }
 
       return res.status(500).json({
-        error: "Error al crear la factura",
+        error: "Error al procesar la solicitud",
         details: errorMessage,
       });
     }

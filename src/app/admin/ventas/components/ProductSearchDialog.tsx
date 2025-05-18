@@ -331,10 +331,6 @@ export function ProductSearchDialog({
                             size="sm"
                             onClick={() => handleProductSelect(producto)}
                             className="bg-cyan-gradient text-white hover:text-white px-1 sm:px-3 py-0 h-7 text-xs sm:text-sm whitespace-nowrap"
-                            disabled={producto.stock <= 0}
-                            title={
-                              producto.stock <= 0 ? "Sin stock disponible" : ""
-                            }
                           >
                             Elegir
                           </Button>

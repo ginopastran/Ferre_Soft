@@ -371,51 +371,34 @@ export const situacionIVAToDocTipo = async (
   tipoComprobante: string
 ): Promise<number> => {
   try {
-    // Obtener los tipos de documento válidos
+    // Obtener tipos de documentos de AFIP
     const tiposDocumento = await getTiposDocumento();
 
-    // Para Facturas A, siempre debe ser CUIT (80)
-    if (tipoComprobante === "FACTURA_A") {
-      // Verificar que el código 80 (CUIT) existe en los tipos válidos
-      const cuitDocType = tiposDocumento.find((t: any) => t.Id === 80);
-      if (cuitDocType) {
-        return 80;
-      } else {
-        console.warn(
-          "Código 80 (CUIT) no encontrado en tipos de documento válidos, usando el primer tipo disponible"
-        );
-        return tiposDocumento[0].Id;
-      }
-    }
+    // Normalizar situación IVA
+    const situacionNormalizada = situacionIVA.toUpperCase().replace(/ /g, "_");
 
-    // Mapeo para otros tipos de comprobantes
-    let docTipo: number;
-    switch (situacionIVA) {
-      case "IVA Responsable Inscripto":
+    switch (situacionNormalizada) {
       case "RESPONSABLE_INSCRIPTO":
-      case "MONOTRIBUTO":
-      case "EXENTO":
-        docTipo = 80; // CUIT
-        break;
+        return 80; // CUIT
+      case "IVA_RESPONSABLE_NO_INSCRIPTO":
+        return 80; // CUIT
+      case "IVA_NO_RESPONSABLE":
+        return 96; // DNI
+      case "IVA_SUJETO_EXENTO":
+        return 80; // CUIT
       case "CONSUMIDOR_FINAL":
+        return 96; // DNI
+      case "MONOTRIBUTISTA":
+        return 80; // CUIT
+      case "SUJETO_NO_CATEGORIZADO":
+        return 96; // DNI
       default:
-        docTipo = 99; // Consumidor Final
+        console.warn(`Situación IVA no reconocida: ${situacionIVA}`);
+        return 96; // DNI por defecto
     }
-
-    // Verificar que el código existe en los tipos válidos
-    const docTipoValido = tiposDocumento.find((t: any) => t.Id === docTipo);
-    if (!docTipoValido) {
-      console.warn(
-        `El código de documento ${docTipo} no es válido según AFIP, usando el primer tipo disponible`
-      );
-      return tiposDocumento[0].Id;
-    }
-
-    return docTipo;
   } catch (error) {
-    console.error("Error al mapear situación IVA a tipo de documento:", error);
-    // En caso de error, usamos el valor por defecto
-    return tipoComprobante === "FACTURA_A" ? 80 : 99;
+    console.error("Error al obtener tipo de documento:", error);
+    throw error;
   }
 };
 

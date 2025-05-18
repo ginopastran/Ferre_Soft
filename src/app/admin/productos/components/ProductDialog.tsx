@@ -17,6 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { RubroSearchDialog } from "./RubroSearchDialog";
+import { Label } from "@/components/ui/label";
 
 export interface ProductForm {
   codigo: string;
@@ -33,6 +35,7 @@ export interface ProductForm {
   precioFinal2: number | "";
   imagenUrl?: string;
   stock: number | "";
+  rubroId?: number;
 }
 
 interface ProductDialogProps {
@@ -87,6 +90,7 @@ export function ProductDialog({
   const [proveedores, setProveedores] = useState<
     { id: number; nombre: string }[]
   >([]);
+  const [isRubroSearchOpen, setIsRubroSearchOpen] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -145,9 +149,6 @@ export function ProductDialog({
     e.preventDefault();
     setIsLoading(true);
 
-    console.log("Datos del formulario:", formData); // Debug
-    console.log("Estado de la imagen:", formData.imagenUrl); // Debug
-
     try {
       if (!formData.imagenUrl) {
         toast.error("Por favor, seleccione una imagen para el producto");
@@ -166,6 +167,8 @@ export function ProductDialog({
       }
 
       await onSubmit(formData);
+
+      // Solo limpiamos y cerramos si no hubo errores
       if (mode === "create") {
         setFormData({
           codigo: "",
@@ -185,17 +188,33 @@ export function ProductDialog({
         });
       }
       onOpenChange(false);
-    } catch (error) {
+      toast.success(
+        mode === "create" ? "Producto creado" : "Producto actualizado"
+      );
+    } catch (error: any) {
       console.error("Error:", error);
-      toast.error("Error al procesar el producto");
+      if (error.message?.includes("413") || error.message?.includes("size")) {
+        toast.error("La imagen es demasiado grande. El tamaño máximo es 3MB");
+      } else {
+        toast.error("Error al procesar el producto");
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleRubroSelect = (rubro: { id: number; nombre: string }) => {
+    setFormData((prev) => ({
+      ...prev,
+      rubro: rubro.nombre,
+      rubroId: rubro.id,
+    }));
+    setIsRubroSearchOpen(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-cyan-gradient">
             {mode === "create" ? "Nuevo Producto" : "Editar Producto"}
@@ -244,28 +263,26 @@ export function ProductDialog({
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Rubro</label>
-              <Select
-                defaultValue={formData.rubro}
-                value={formData.rubro}
-                onValueChange={(value) => {
-                  console.log("Rubro seleccionado:", value); // Para debug
-                  setFormData({ ...formData, rubro: value });
-                }}
-                disabled={isLoading}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Seleccione un rubro" />
-                </SelectTrigger>
-                <SelectContent>
-                  {rubros.map((rubro) => (
-                    <SelectItem key={rubro.id} value={rubro.nombre}>
-                      {rubro.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex flex-col space-y-2">
+              <Label>Rubro</Label>
+              <div className="flex space-x-2">
+                <Input
+                  value={formData.rubro}
+                  onChange={(e) =>
+                    setFormData({ ...formData, rubro: e.target.value })
+                  }
+                  className="flex-1"
+                  readOnly
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsRubroSearchOpen(true)}
+                  className="bg-cyan-gradient text-white hover:text-white"
+                >
+                  Buscar
+                </Button>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -486,6 +503,12 @@ export function ProductDialog({
           </div>
         </form>
       </DialogContent>
+
+      <RubroSearchDialog
+        open={isRubroSearchOpen}
+        onOpenChange={setIsRubroSearchOpen}
+        onRubroSelect={handleRubroSelect}
+      />
     </Dialog>
   );
 }

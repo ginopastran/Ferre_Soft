@@ -53,7 +53,9 @@ model Producto {
   codigo          String           @unique
   codigoProveedor String
   codigoBarras    String?          @unique
-  rubro           String // Mantenemos rubro como string
+  rubro           String // Campo existente para mantener compatibilidad
+  rubroId         Int? // Nueva relación con el modelo Rubro
+  rubroRelacion   Rubro?           @relation(fields: [rubroId], references: [id])
   descripcion     String
   proveedor       String
   precioCosto     Float
@@ -73,6 +75,7 @@ model Producto {
   @@index([codigoProveedor])
   @@index([codigoBarras])
   @@index([rubro])
+  @@index([rubroId])
 }
 
 model OrdenCompra {
@@ -193,11 +196,12 @@ model Cliente {
 
 // Modelo para sugerencias de rubros
 model Rubro {
-  id            Int      @id @default(autoincrement())
-  nombre        String   @unique
+  id            Int        @id @default(autoincrement())
+  nombre        String     @unique
   descripcion   String?
-  creadoEn      DateTime @default(now())
-  actualizadoEn DateTime @updatedAt
+  productos     Producto[] // Relación inversa con Producto
+  creadoEn      DateTime   @default(now())
+  actualizadoEn DateTime   @updatedAt
 }
 
 model Proveedor {
