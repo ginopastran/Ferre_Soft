@@ -240,7 +240,7 @@ export function ComisionMensualTab({
 
           {loading ? (
             <div className="flex justify-center items-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+              <Loader2 className="h-8 w-8 animate-spin text-cyan-600" />
             </div>
           ) : facturas.length > 0 ? (
             <>
@@ -292,7 +292,7 @@ export function ComisionMensualTab({
                 </Table>
               </div>
 
-              <div className="bg-indigo-50 p-4 rounded-md">
+              <div className="bg-cyan-50 p-4 rounded-md">
                 <div className="flex justify-between items-center">
                   <div>
                     <p className="text-sm font-medium">
@@ -324,13 +324,13 @@ export function ComisionMensualTab({
                           Ya pagado: {formatCurrency(totalPagado)}
                         </p>
                         <p className="text-sm font-medium mt-1">Pendiente:</p>
-                        <p className="text-xl font-bold text-indigo-600">
+                        <p className="text-xl font-bold text-cyan-600">
                           {formatCurrency(montoPendiente)}
                         </p>
                       </>
                     )}
                     {totalPagado === 0 && (
-                      <p className="text-xl font-bold text-indigo-600">
+                      <p className="text-xl font-bold text-cyan-600">
                         {formatCurrency(totalComision)}
                       </p>
                     )}
@@ -342,7 +342,7 @@ export function ComisionMensualTab({
                 <Button
                   onClick={handlePagarComision}
                   disabled={processingPago || montoPendiente <= 0}
-                  className="bg-indigo-gradient"
+                  className="bg-cyan-gradient"
                 >
                   {processingPago ? (
                     <>

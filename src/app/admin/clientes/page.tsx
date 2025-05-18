@@ -279,7 +279,7 @@ function ClientesContent() {
         <div className="flex items-center gap-2 px-4">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-4" />
-          <h2 className="text-3xl font-bold tracking-tight text-indigo-gradient">
+          <h2 className="text-3xl font-bold tracking-tight text-cyan-gradient">
             Listado de Clientes
           </h2>
         </div>
@@ -291,14 +291,14 @@ function ClientesContent() {
             <Input
               type="search"
               placeholder="Buscar clientes..."
-              className="pl-8 w-full md:w-1/2"
+              className="pl-8 w-full md:w-1/2 shadow-md"
               value={searchTerm}
               onChange={(e) => handleSearchChange(e.target.value)}
             />
           </div>
           <Button
             onClick={handleAddClient}
-            className="bg-indigo-gradient"
+            className="bg-cyan-gradient shadow-md"
             size="sm"
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -314,12 +314,12 @@ function ClientesContent() {
               <Card key={client.codigo} className="w-full">
                 <CardContent className="p-6">
                   <div className="flex justify-between items-start mb-4">
-                    <h2 className="text-2xl font-semibold text-indigo-gradient">
+                    <h2 className="text-2xl font-semibold text-cyan-gradient">
                       {client.nombre}
                     </h2>
                     <Badge
                       variant="secondary"
-                      className="bg-indigo-gradient text-white text-sm"
+                      className="bg-cyan-gradient text-white text-sm"
                     >
                       {client.codigo}
                     </Badge>
@@ -344,7 +344,7 @@ function ClientesContent() {
                   </div>
                   <Button
                     variant="outline"
-                    className="w-full bg-indigo-gradient text-white hover:text-white"
+                    className="w-full bg-cyan-gradient text-white hover:text-white"
                     onClick={() => handleViewDetails(client.codigo)}
                   >
                     Ver detalles

@@ -245,7 +245,7 @@ function VendedoresContent() {
         <div className="flex items-center gap-2 px-2 md:px-4">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-1 md:mr-2 h-4" />
-          <h2 className="text-3xl font-bold tracking-tight text-indigo-gradient">
+          <h2 className="text-3xl font-bold tracking-tight text-cyan-gradient">
             Vendedores
           </h2>
         </div>
@@ -259,7 +259,7 @@ function VendedoresContent() {
                 <Input
                   type="search"
                   placeholder="Buscar por nombre, email, DNI, sucursal..."
-                  className="pl-8 w-full"
+                  className="pl-8 w-full shadow-md"
                   value={searchTerm}
                   onChange={(e) => handleSearch(e.target.value)}
                 />
@@ -269,7 +269,7 @@ function VendedoresContent() {
                   variant="outline"
                   size="sm"
                   onClick={handleClearFilters}
-                  className="h-8 px-2 lg:px-3 text-xs md:text-sm"
+                  className="h-8 px-2 lg:px-3 text-xs md:text-sm shadow-md"
                 >
                   Limpiar
                   <X className="ml-1 md:ml-2 h-3 w-3 md:h-4 md:w-4" />
@@ -278,7 +278,7 @@ function VendedoresContent() {
             </div>
             <Button
               onClick={() => setIsDialogOpen(true)}
-              className="bg-indigo-gradient"
+              className="bg-cyan-gradient shadow-md"
               size="sm"
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -300,7 +300,7 @@ function VendedoresContent() {
                 <CardContent className="p-6">
                   <div className="flex justify-between items-start mb-4">
                     <div>
-                      <h2 className="text-2xl font-semibold text-indigo-gradient">
+                      <h2 className="text-2xl font-semibold text-cyan-gradient">
                         {vendedor.nombre}
                       </h2>
                       <p className="text-sm text-muted-foreground">
@@ -387,7 +387,7 @@ function VendedoresContent() {
                       <label className="text-sm text-muted-foreground">
                         A Pagar
                       </label>
-                      <p className="font-semibold text-lg text-indigo-600">
+                      <p className="font-semibold text-lg text-cyan-600">
                         {formatCurrency(vendedor.montoPendiente)}
                       </p>
                       <p className="text-sm text-muted-foreground">
@@ -399,7 +399,7 @@ function VendedoresContent() {
                         onClick={() => {
                           router.push(`/admin/vendedores/${vendedor.id}`);
                         }}
-                        className="bg-indigo-gradient mr-2 w-full"
+                        className="bg-cyan-gradient mr-2 w-full"
                       >
                         <DollarSign className="h-4 w-4 mr-2" />
                         Ver Detalles

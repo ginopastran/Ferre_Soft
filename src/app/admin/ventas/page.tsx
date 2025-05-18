@@ -175,7 +175,7 @@ function VentasContent() {
         <div className="flex items-center gap-2 px-2 md:px-4">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-1 md:mr-2 h-4" />
-          <h2 className="text-3xl font-bold tracking-tight text-indigo-gradient">
+          <h2 className="text-3xl font-bold tracking-tight text-cyan-gradient">
             Ventas
           </h2>
         </div>
@@ -185,11 +185,11 @@ function VentasContent() {
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div className="flex md:flex-row flex-col w-full md:w-1/2 items-start md:items-center gap-2">
               <div className="relative flex-grow w-full">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground " />
                 <Input
                   type="search"
                   placeholder="Buscar por número, cliente, vendedor..."
-                  className="pl-8 w-full"
+                  className="pl-8 w-full shadow-md"
                   value={searchTerm}
                   onChange={(e) => handleSearch(e.target.value)}
                 />
@@ -200,7 +200,7 @@ function VentasContent() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="text-xs md:text-sm"
+                      className="text-xs md:text-sm shadow-md"
                     >
                       <Filter className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
                       Filtrar
@@ -243,7 +243,7 @@ function VentasContent() {
             </div>
             <Button
               onClick={() => setIsDialogOpen(true)}
-              className="bg-indigo-gradient"
+              className="bg-cyan-gradient shadow-md"
               size="sm"
             >
               <Plus className="h-4 w-4 mr-2" />

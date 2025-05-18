@@ -29,7 +29,7 @@ export function ProductCard({ product, onViewDetails }: ProductCardProps) {
         </div>
         <div className="flex justify-between items-start my-4">
           <div>
-            <h2 className="text-2xl font-semibold text-indigo-gradient">
+            <h2 className="text-2xl font-semibold text-cyan-gradient">
               {product.descripcion}
             </h2>
           </div>
@@ -58,7 +58,7 @@ export function ProductCard({ product, onViewDetails }: ProductCardProps) {
 
         <Button
           variant="outline"
-          className="w-full bg-indigo-gradient text-white hover:text-white"
+          className="w-full bg-cyan-gradient text-white hover:text-white"
           onClick={() => onViewDetails(product.id)}
         >
           Ver detalles

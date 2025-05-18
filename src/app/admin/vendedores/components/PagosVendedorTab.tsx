@@ -93,7 +93,7 @@ export function PagosVendedorTab({
 
           {loading ? (
             <div className="flex justify-center items-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+              <Loader2 className="h-8 w-8 animate-spin text-cyan-600" />
             </div>
           ) : pagos.length > 0 ? (
             <div className="border rounded-md">
@@ -146,7 +146,7 @@ export function PagosVendedorTab({
           )}
 
           {pagos.length > 0 && (
-            <div className="bg-indigo-50 p-4 rounded-md">
+            <div className="bg-cyan-50 p-4 rounded-md">
               <div className="flex justify-between items-center">
                 <div>
                   <p className="text-sm font-medium">
@@ -155,7 +155,7 @@ export function PagosVendedorTab({
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-medium">Total pagado:</p>
-                  <p className="text-xl font-bold text-indigo-600">
+                  <p className="text-xl font-bold text-cyan-600">
                     {formatCurrency(
                       pagos.reduce((sum, pago) => sum + pago.monto, 0)
                     )}

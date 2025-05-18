@@ -74,7 +74,7 @@ export function FacturaCard({
       >
         <div className="flex justify-between items-start mb-4">
           <div>
-            <h2 className="text-2xl font-semibold text-indigo-gradient">
+            <h2 className="text-2xl font-semibold text-cyan-gradient">
               {factura.numero}
             </h2>
             <p className="text-sm text-muted-foreground">
@@ -125,7 +125,7 @@ export function FacturaCard({
             <>
               <Button
                 variant="outline"
-                className="flex-1 bg-indigo-gradient text-white hover:text-white"
+                className="flex-1 bg-cyan-gradient text-white hover:text-white"
                 onClick={handleViewDetails}
               >
                 Ver detalles
@@ -133,7 +133,7 @@ export function FacturaCard({
               </Button>
               <Button
                 variant="outline"
-                className="flex-1 bg-indigo-gradient text-white hover:text-white"
+                className="flex-1 bg-cyan-gradient text-white hover:text-white"
                 onClick={() => setIsPagoDialogOpen(true)}
               >
                 Ingresar Pago
@@ -143,7 +143,7 @@ export function FacturaCard({
           ) : (
             <Button
               variant="outline"
-              className="w-full bg-indigo-gradient text-white hover:text-white"
+              className="w-full bg-cyan-gradient text-white hover:text-white"
               onClick={handleViewDetails}
             >
               Ver detalles

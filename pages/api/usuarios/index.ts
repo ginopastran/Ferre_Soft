@@ -64,13 +64,15 @@ export default async function handler(
       // Verificar si ya existe un usuario con ese email o dni
       const existingUser = await prisma.usuario.findFirst({
         where: {
-          OR: [{ email }, { dni }],
+          OR: [{ email }, ...(dni ? [{ dni }] : [])],
         },
       });
 
       if (existingUser) {
         return res.status(400).json({
-          error: "Ya existe un usuario con ese email o DNI",
+          error: dni
+            ? "Ya existe un usuario con ese email o DNI"
+            : "Ya existe un usuario con ese email",
         });
       }
 
@@ -92,7 +94,7 @@ export default async function handler(
       const nuevoUsuario = await prisma.usuario.create({
         data: {
           nombre,
-          dni,
+          dni: dni?.trim() || null,
           telefono,
           email,
           password: hashedPassword,

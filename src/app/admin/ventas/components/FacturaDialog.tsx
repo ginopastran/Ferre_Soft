@@ -344,7 +344,7 @@ export function FacturaDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-indigo-gradient">
+          <DialogTitle className="text-2xl font-bold text-cyan-gradient">
             {aumentaStock ? "Nueva Nota de Crédito" : "Nueva Factura"}
           </DialogTitle>
           {aumentaStock && (
@@ -482,7 +482,7 @@ export function FacturaDialog({
                   type="button"
                   onClick={handleAddProducto}
                   disabled={isLoading}
-                  className="bg-indigo-gradient"
+                  className="bg-cyan-gradient"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Agregar Producto
@@ -575,7 +575,7 @@ export function FacturaDialog({
                     <td colSpan={3} className="p-2 text-right font-semibold">
                       Total Final:
                     </td>
-                    <td className="p-2 text-right font-semibold text-lg text-indigo-600">
+                    <td className="p-2 text-right font-semibold text-lg text-cyan-600">
                       {formatCurrency(total)}
                     </td>
                     <td></td>
@@ -596,7 +596,7 @@ export function FacturaDialog({
             </Button>
             <Button
               type="submit"
-              className="bg-indigo-gradient"
+              className="bg-cyan-gradient"
               disabled={isLoading || detalles.length === 0}
             >
               {isLoading

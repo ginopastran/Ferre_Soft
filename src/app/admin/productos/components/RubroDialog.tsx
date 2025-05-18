@@ -91,7 +91,7 @@ export function RubroDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle className="text-indigo-gradient text-2xl">
+          <DialogTitle className="text-cyan-gradient text-2xl">
             Gestionar Rubros
           </DialogTitle>
         </DialogHeader>
@@ -102,7 +102,7 @@ export function RubroDialog({
               <div className="flex justify-end">
                 <Button
                   onClick={() => setIsAddingNew(true)}
-                  className="bg-indigo-gradient"
+                  className="bg-cyan-gradient"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Nuevo Rubro
@@ -120,7 +120,7 @@ export function RubroDialog({
                       variant="outline"
                       size="sm"
                       onClick={() => handleEdit(rubro)}
-                      className="bg-indigo-gradient text-white hover:text-white"
+                      className="bg-cyan-gradient text-white hover:text-white"
                     >
                       <Pencil className="h-4 w-4 mr-2" />
                       Editar
@@ -157,7 +157,7 @@ export function RubroDialog({
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="bg-indigo-gradient"
+                  className="bg-cyan-gradient"
                 >
                   {isLoading
                     ? editingId

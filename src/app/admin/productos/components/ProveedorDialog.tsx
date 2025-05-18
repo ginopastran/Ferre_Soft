@@ -91,7 +91,7 @@ export function ProveedorDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle className="text-indigo-gradient text-2xl">
+          <DialogTitle className="text-cyan-gradient text-2xl">
             {mode === "edit" ? "Editar Proveedor" : "Nuevo Proveedor"}
           </DialogTitle>
         </DialogHeader>
@@ -166,7 +166,7 @@ export function ProveedorDialog({
             <Button
               type="submit"
               disabled={isLoading}
-              className="bg-indigo-gradient"
+              className="bg-cyan-gradient"
             >
               {isLoading
                 ? mode === "edit"

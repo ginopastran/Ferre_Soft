@@ -58,10 +58,6 @@ export function VendedorDialog({
       toast.error("El nombre es requerido");
       return;
     }
-    if (!formData.dni.trim()) {
-      toast.error("El DNI es requerido");
-      return;
-    }
     if (!formData.email.trim()) {
       toast.error("El email es requerido");
       return;
@@ -73,6 +69,18 @@ export function VendedorDialog({
 
     setIsLoading(true);
     try {
+      // Crear email permitido automáticamente
+      await fetch("/api/emails-permitidos", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          activo: true,
+        }),
+      });
+
       await onSubmit(formData);
       setFormData({
         nombre: "",
@@ -100,7 +108,7 @@ export function VendedorDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-indigo-gradient">
+          <DialogTitle className="text-2xl font-bold text-cyan-gradient">
             Nuevo Vendedor
           </DialogTitle>
         </DialogHeader>
@@ -121,7 +129,6 @@ export function VendedorDialog({
           <div className="space-y-2">
             <label className="text-sm font-medium">DNI</label>
             <Input
-              required
               value={formData.dni}
               onChange={(e) =>
                 setFormData({ ...formData, dni: e.target.value })
@@ -217,7 +224,7 @@ export function VendedorDialog({
             <Button
               type="submit"
               disabled={isLoading}
-              className="bg-indigo-gradient"
+              className="bg-cyan-gradient"
             >
               {isLoading ? "Creando..." : "Crear Vendedor"}
             </Button>

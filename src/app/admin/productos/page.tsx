@@ -316,13 +316,13 @@ function ProductosContent() {
         <div className="flex items-center gap-2 px-2 md:px-4">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-1 md:mr-2 h-4" />
-          <h2 className="text-3xl font-bold tracking-tight text-indigo-gradient">
+          <h2 className="text-3xl font-bold tracking-tight text-cyan-gradient">
             Productos
           </h2>
           <Button
             variant="outline"
             size="sm"
-            className="ml-auto mr-4 bg-indigo-gradient text-white hover:text-white"
+            className="ml-auto mr-4 bg-cyan-gradient text-white hover:text-white shadow-md"
             onClick={() => {
               const catalogoUrl = `${window.location.origin}/catalogo`;
               if (navigator.share) {
@@ -358,7 +358,7 @@ function ProductosContent() {
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Buscar por nombre, código, código de proveedor o código de barras..."
-                  className="pl-8 w-full"
+                  className="pl-8 w-full shadow-md"
                   value={searchTerm}
                   onChange={(e) => handleSearch(e.target.value)}
                 />
@@ -371,7 +371,7 @@ function ProductosContent() {
                   <Button
                     variant="ghost"
                     onClick={handleClearFilters}
-                    className="h-8 px-2 lg:px-3 text-xs md:text-sm"
+                    className="h-8 px-2 lg:px-3 text-xs md:text-sm shadow-md"
                   >
                     Limpiar
                     <X className="ml-1 md:ml-2 h-3 w-3 md:h-4 md:w-4" />
@@ -382,7 +382,7 @@ function ProductosContent() {
                   variant="outline"
                   size="sm"
                   onClick={() => setIsFilterDialogOpen(true)}
-                  className="text-xs md:text-sm"
+                  className="text-xs md:text-sm shadow-md"
                 >
                   <Filter className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
                   Filtrar
@@ -398,7 +398,7 @@ function ProductosContent() {
                   variant="outline"
                   size="sm"
                   onClick={() => setIsSortDialogOpen(true)}
-                  className="text-xs md:text-sm"
+                  className="text-xs md:text-sm shadow-md"
                 >
                   <List className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
                   Ordenar
@@ -409,14 +409,14 @@ function ProductosContent() {
             <div className="flex gap-2 justify-start md:justify-end  w-full">
               <Button
                 onClick={() => setIsRubroDialogOpen(true)}
-                className="bg-indigo-gradient"
+                className="bg-cyan-gradient shadow-md"
               >
                 <FolderPlus className="h-4 w-4 mr-2" />
                 Rubros
               </Button>
               <Button
                 onClick={() => setIsDialogOpen(true)}
-                className="bg-indigo-gradient"
+                className="bg-cyan-gradient shadow-md"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Agregar producto

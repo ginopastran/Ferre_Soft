@@ -197,7 +197,7 @@ export function ProductDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-indigo-gradient">
+          <DialogTitle className="text-2xl font-bold text-cyan-gradient">
             {mode === "create" ? "Nuevo Producto" : "Editar Producto"}
           </DialogTitle>
           <p className="text-sm text-muted-foreground mt-2">
@@ -472,7 +472,7 @@ export function ProductDialog({
             </Button>
             <Button
               type="submit"
-              className="bg-indigo-gradient"
+              className="bg-cyan-gradient"
               disabled={isLoading}
             >
               {isLoading

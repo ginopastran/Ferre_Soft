@@ -70,7 +70,7 @@ export function MessageEditor({
         </Button>
         <Button
           variant="default"
-          className="h-fit py-2 px-3 bg-indigo-gradient text-primary-foreground"
+          className="h-fit py-2 px-3 bg-cyan-gradient text-primary-foreground"
           disabled={isSubmitting}
           onClick={async () => {
             setIsSubmitting(true);

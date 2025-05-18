@@ -190,7 +190,7 @@ export function ProductSearchDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] sm:max-h-[80vh] w-[95vw] sm:w-auto p-3 sm:p-6 flex flex-col">
         <DialogHeader>
-          <DialogTitle className="text-xl sm:text-2xl font-bold text-indigo-gradient text-center">
+          <DialogTitle className="text-xl sm:text-2xl font-bold text-cyan-gradient text-center">
             Buscar Producto
           </DialogTitle>
         </DialogHeader>
@@ -330,7 +330,7 @@ export function ProductSearchDialog({
                             variant="outline"
                             size="sm"
                             onClick={() => handleProductSelect(producto)}
-                            className="bg-indigo-gradient text-white hover:text-white px-1 sm:px-3 py-0 h-7 text-xs sm:text-sm whitespace-nowrap"
+                            className="bg-cyan-gradient text-white hover:text-white px-1 sm:px-3 py-0 h-7 text-xs sm:text-sm whitespace-nowrap"
                             disabled={producto.stock <= 0}
                             title={
                               producto.stock <= 0 ? "Sin stock disponible" : ""

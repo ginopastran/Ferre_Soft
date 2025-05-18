@@ -132,7 +132,7 @@ export default function ClientePage() {
               <Button
                 variant="outline"
                 onClick={() => router.back()}
-                className="flex items-center bg-indigo-gradient text-white hover:text-white"
+                className="flex items-center bg-cyan-gradient text-white hover:text-white"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Volver a clientes
@@ -150,12 +150,12 @@ export default function ClientePage() {
                   <div className="space-y-6">
                     <div className="flex flex-col md:flex-row justify-between items-start">
                       <div className="flex items-center gap-4 flex-wrap">
-                        <h2 className="text-3xl font-bold text-indigo-gradient">
+                        <h2 className="text-3xl font-bold text-cyan-gradient">
                           {client?.nombre}
                         </h2>
                         <Badge
                           variant="secondary"
-                          className="bg-indigo-gradient text-white text-sm"
+                          className="bg-cyan-gradient text-white text-sm"
                         >
                           {client?.codigo}
                         </Badge>
@@ -170,7 +170,7 @@ export default function ClientePage() {
                       <Button
                         variant="outline"
                         onClick={() => setIsDialogOpen(true)}
-                        className="bg-indigo-gradient text-white hover:text-white"
+                        className="bg-cyan-gradient text-white hover:text-white"
                       >
                         <Pencil className="h-4 w-4 mr-2" />
                         Editar Cliente
@@ -244,7 +244,7 @@ export default function ClientePage() {
             )}
 
             <div className="space-y-4">
-              <h2 className="text-2xl font-bold text-indigo-gradient">
+              <h2 className="text-2xl font-bold text-cyan-gradient">
                 Historial de Facturas
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">

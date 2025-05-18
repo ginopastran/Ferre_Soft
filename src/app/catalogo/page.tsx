@@ -201,12 +201,12 @@ export default function CatalogoPage() {
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold text-indigo-600">
+            <h1 className="text-3xl font-bold text-cyan-600">
               Catálogo de Productos (Precios sin IVA)
             </h1>
             <Button
               onClick={handleDownloadPDF}
-              className="bg-indigo-600 hover:bg-indigo-700"
+              className="bg-cyan-600 hover:bg-cyan-700"
             >
               <FileDown className="h-4 w-4 mr-2" />
               Descargar PDF

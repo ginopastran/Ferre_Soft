@@ -89,7 +89,7 @@ export function PagoVendedorDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-indigo-gradient">
+          <DialogTitle className="text-2xl font-bold text-cyan-gradient">
             Registrar Pago a {nombreVendedor}
           </DialogTitle>
         </DialogHeader>
@@ -158,7 +158,7 @@ export function PagoVendedorDialog({
             <Button
               type="submit"
               disabled={isLoading}
-              className="bg-indigo-gradient"
+              className="bg-cyan-gradient"
             >
               {isLoading ? "Registrando..." : "Registrar Pago"}
             </Button>

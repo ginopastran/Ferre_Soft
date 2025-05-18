@@ -120,7 +120,7 @@ export default function CatalogoTablaPage() {
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cyan-500"></div>
       </div>
     );
   }
@@ -131,7 +131,7 @@ export default function CatalogoTablaPage() {
 
       <div className="container mx-auto py-8 px-4">
         <div className="flex flex-col md:flex-row justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-indigo-600 mb-4 md:mb-0">
+          <h1 className="text-3xl font-bold text-cyan-600 mb-4 md:mb-0">
             Lista de Precios (Sin IVA)
           </h1>
           <Button
@@ -157,7 +157,7 @@ export default function CatalogoTablaPage() {
             <div className="overflow-x-auto">
               {rubros.map((rubro) => (
                 <div key={rubro} className="mb-8">
-                  <h2 className="text-xl font-bold mb-4 bg-indigo-600 text-white py-2 px-4 rounded">
+                  <h2 className="text-xl font-bold mb-4 bg-cyan-600 text-white py-2 px-4 rounded">
                     {rubro}
                   </h2>
                   <div className="overflow-x-auto">

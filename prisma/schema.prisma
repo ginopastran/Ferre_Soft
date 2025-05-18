@@ -32,7 +32,7 @@ model Rol {
 model Usuario {
   id             Int            @id @default(autoincrement())
   nombre         String
-  dni            String         @unique
+  dni            String?        @unique
   telefono       String?
   email          String         @unique
   password       String

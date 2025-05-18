@@ -40,7 +40,7 @@ export function CatalogoCard({ producto }: CatalogoCardProps) {
         </div>
 
         <div className="mt-4">
-          <h3 className="text-xl font-semibold text-indigo-600 mb-2">
+          <h3 className="text-xl font-semibold text-cyan-600 mb-2">
             {producto.descripcion}
           </h3>
 

@@ -51,9 +51,9 @@ export function NavMain({
                 <Link href={item.url}>
                   <SidebarMenuButton
                     tooltip={item.title}
-                    className={`group-data-[collapsible=icon]:!p-1.5 flex items-center text-base [&>svg]:size-5 hover:bg-indigo-gradient hover:text-white transition-all duration-300 ease-in-out active:bg-indigo-600 active:text-white py-5  ${
+                    className={`group-data-[collapsible=icon]:!p-1.5 flex items-center text-base [&>svg]:size-5 hover:bg-cyan-gradient hover:text-white transition-all duration-300 ease-in-out active:bg-cyan-600 active:text-white py-5 rounded-xl ${
                       activeUrl === item.url
-                        ? "font-medium text-white bg-indigo-gradient"
+                        ? "font-medium text-white bg-cyan-gradient"
                         : " text-muted-foreground"
                     }`}
                   >

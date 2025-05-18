@@ -73,7 +73,7 @@ function VendedorContent() {
           <Button
             variant="outline"
             onClick={() => router.back()}
-            className="flex items-center bg-indigo-gradient text-white hover:text-white"
+            className="flex items-center bg-cyan-gradient text-white hover:text-white"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Volver a vendedores
@@ -102,7 +102,7 @@ function VendedorContent() {
           <div className="p-6 bg-white rounded-lg border shadow-sm">
             <div className="flex justify-between items-start mb-6">
               <div>
-                <h2 className="text-2xl font-semibold text-indigo-gradient">
+                <h2 className="text-2xl font-semibold text-cyan-gradient">
                   {vendedor.nombre}
                 </h2>
                 <p className="text-sm text-muted-foreground">

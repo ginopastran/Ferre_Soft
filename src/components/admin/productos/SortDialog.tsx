@@ -26,7 +26,7 @@ export const SortDialog: React.FC<SortDialogProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-[90vw] md:w-full rounded-xl">
         <DialogHeader>
-          <DialogTitle className="text-indigo-gradient font-bold text-2xl">
+          <DialogTitle className="text-cyan-gradient font-bold text-2xl">
             Ordenar Productos
           </DialogTitle>
         </DialogHeader>
@@ -73,7 +73,7 @@ export const SortDialog: React.FC<SortDialogProps> = ({
         <DialogFooter>
           <Button
             onClick={onClose}
-            className="bg-indigo-gradient hover:bg-indigo-gradient-hover"
+            className="bg-cyan-gradient hover:bg-cyan-gradient-hover"
           >
             Cerrar
           </Button>

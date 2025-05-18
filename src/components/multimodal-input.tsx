@@ -344,7 +344,7 @@ function PureSendButton({
 }) {
   return (
     <Button
-      className="rounded-full p-1.5 h-fit border bg-indigo-gradient"
+      className="rounded-full p-1.5 h-fit border bg-cyan-gradient"
       onClick={(event) => {
         event.preventDefault();
         submitForm();

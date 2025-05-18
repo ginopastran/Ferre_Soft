@@ -66,7 +66,7 @@ export const FilterDialog: React.FC<FilterDialogProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-[90vw] md:w-full rounded-xl">
         <DialogHeader>
-          <DialogTitle className="text-indigo-gradient font-bold text-2xl">
+          <DialogTitle className="text-cyan-gradient font-bold text-2xl">
             Filtrar Productos
           </DialogTitle>
         </DialogHeader>
@@ -118,7 +118,7 @@ export const FilterDialog: React.FC<FilterDialogProps> = ({
         <DialogFooter>
           <Button
             onClick={onClose}
-            className="bg-indigo-gradient text-white hover:text-white"
+            className="bg-cyan-gradient text-white hover:text-white"
           >
             Aplicar
           </Button>

@@ -136,7 +136,7 @@ export default function SucursalesPage() {
             <div className="flex items-center gap-2 px-4">
               <SidebarTrigger className="-ml-1" />
               <Separator orientation="vertical" className="mr-2 h-4" />
-              <h2 className="text-3xl font-bold tracking-tight text-indigo-gradient">
+              <h2 className="text-3xl font-bold tracking-tight text-cyan-gradient">
                 Sucursales
               </h2>
             </div>
@@ -145,7 +145,7 @@ export default function SucursalesPage() {
             <div className="flex items-center justify-end">
               <Button
                 onClick={() => setIsDialogOpen(true)}
-                className="bg-indigo-gradient"
+                className="bg-cyan-gradient"
               >
                 <Plus className="mr-2 h-4 w-4" />
                 Nueva Sucursal
@@ -201,7 +201,7 @@ export default function SucursalesPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="w-[90vw] md:w-full rounded-xl">
           <DialogHeader>
-            <DialogTitle className="text-indigo-gradient font-bold text-2xl">
+            <DialogTitle className="text-cyan-gradient font-bold text-2xl">
               Nueva Sucursal
             </DialogTitle>
           </DialogHeader>
@@ -224,7 +224,7 @@ export default function SucursalesPage() {
             </div>
             <Button
               type="submit"
-              className="w-full bg-indigo-gradient"
+              className="w-full bg-cyan-gradient"
               disabled={loading}
             >
               {loading ? "Creando..." : "Crear Sucursal"}

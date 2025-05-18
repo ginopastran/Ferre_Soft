@@ -83,7 +83,7 @@ export default function RegisterPage() {
     <div className="flex min-h-screen items-center justify-center">
       <div className="w-full max-w-md space-y-8 px-4">
         <div className="space-y-2 text-center">
-          <h1 className="text-3xl font-bold text-indigo-gradient">
+          <h1 className="text-3xl font-bold text-cyan-gradient">
             Crear Cuenta
           </h1>
           <p className="text-gray-500">
@@ -165,7 +165,7 @@ export default function RegisterPage() {
 
             <Button
               type="submit"
-              className="w-full bg-indigo-gradient"
+              className="w-full bg-cyan-gradient"
               disabled={isLoading}
             >
               Registrarse
@@ -175,7 +175,7 @@ export default function RegisterPage() {
 
         <div className="text-center text-sm">
           ¿Ya tienes una cuenta?{" "}
-          <Link href="/login" className="text-indigo-600 hover:underline">
+          <Link href="/login" className="text-cyan-600 hover:underline">
             Inicia sesión aquí
           </Link>
         </div>

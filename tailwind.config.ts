@@ -11,6 +11,9 @@ export default {
     extend: {
       colors: {
         "white-cream": "#F4F4F4",
+        "andes-gold": "#b3ab85",
+        "andes-gold-dark": "#7d785d",
+        "andes-gold-light": "#cac4aa",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         card: {

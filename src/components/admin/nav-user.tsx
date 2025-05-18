@@ -61,9 +61,9 @@ export function NavUser() {
           <Link href={"/admin/paltai"}>
             <SidebarMenuButton
               tooltip={"Chat Paltai"}
-              className={`group-data-[collapsible=icon]:!p-1.5 flex items-center text-base [&>svg]:size-5 hover:bg-indigo-gradient hover:text-white transition-all duration-300 ease-in-out active:bg-indigo-600 active:text-white py-5 mb-1 ${
+              className={`group-data-[collapsible=icon]:!p-1.5 flex items-center text-base [&>svg]:size-5 hover:bg-cyan-gradient hover:text-white transition-all duration-300 ease-in-out active:bg-cyan-600 active:text-white py-5 mb-1 ${
                 pathname === "/admin/paltai"
-                  ? "font-medium text-white bg-indigo-gradient"
+                  ? "font-medium text-white bg-cyan-gradient"
                   : " text-muted-foreground"
               }`}
             >
@@ -79,7 +79,7 @@ export function NavUser() {
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg text-white">
-                <AvatarFallback className="rounded-lg bg-indigo-gradient">
+                <AvatarFallback className="rounded-lg bg-cyan-gradient">
                   {user.nombre.substring(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
@@ -99,7 +99,7 @@ export function NavUser() {
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarFallback className="rounded-lg bg-indigo-gradient text-white">
+                  <AvatarFallback className="rounded-lg bg-cyan-gradient text-white">
                     {user.nombre.substring(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>

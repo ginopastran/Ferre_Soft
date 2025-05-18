@@ -256,7 +256,7 @@ export function Weather({
           "bg-blue-400": isDay,
         },
         {
-          "bg-indigo-900": !isDay,
+          "bg-cyan-900": !isDay,
         }
       )}
     >
@@ -269,7 +269,7 @@ export function Weather({
                 "bg-yellow-300": isDay,
               },
               {
-                "bg-indigo-100": !isDay,
+                "bg-cyan-100": !isDay,
               }
             )}
           />
@@ -297,7 +297,7 @@ export function Weather({
                   "bg-yellow-300": isDay,
                 },
                 {
-                  "bg-indigo-200": !isDay,
+                  "bg-cyan-200": !isDay,
                 }
               )}
             />

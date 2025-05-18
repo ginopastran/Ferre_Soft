@@ -94,7 +94,7 @@ export default function ProveedorPage() {
               <Button
                 variant="outline"
                 onClick={() => router.back()}
-                className="flex items-center bg-indigo-gradient text-white hover:text-white"
+                className="flex items-center bg-cyan-gradient text-white hover:text-white"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Volver a proveedores
@@ -112,13 +112,13 @@ export default function ProveedorPage() {
                   <div className="space-y-6">
                     <div className="flex flex-col md:flex-row justify-between items-start">
                       <div className="flex items-center gap-4 flex-wrap">
-                        <h2 className="text-3xl font-bold text-indigo-gradient">
+                        <h2 className="text-3xl font-bold text-cyan-gradient">
                           {proveedor?.nombre}
                         </h2>
                         {proveedor?.codigo && (
                           <Badge
                             variant="secondary"
-                            className="bg-indigo-gradient text-white text-sm"
+                            className="bg-cyan-gradient text-white text-sm"
                           >
                             {proveedor.codigo}
                           </Badge>
@@ -135,7 +135,7 @@ export default function ProveedorPage() {
                         <Button
                           variant="outline"
                           onClick={() => setIsActualizarPreciosOpen(true)}
-                          className="bg-indigo-gradient text-white hover:text-white"
+                          className="bg-cyan-gradient text-white hover:text-white"
                         >
                           <DollarSign className="h-4 w-4 mr-2" />
                           Actualizar Precios
@@ -143,7 +143,7 @@ export default function ProveedorPage() {
                         <Button
                           variant="outline"
                           onClick={() => setIsDialogOpen(true)}
-                          className="bg-indigo-gradient text-white hover:text-white"
+                          className="bg-cyan-gradient text-white hover:text-white"
                         >
                           <Pencil className="h-4 w-4 mr-2" />
                           Editar Proveedor

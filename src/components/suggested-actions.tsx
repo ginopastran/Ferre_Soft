@@ -34,7 +34,7 @@ function PureSuggestedActions({ chatId, append }: SuggestedActionsProps) {
           className={index > 1 ? "hidden sm:block" : "block"}
         >
           <div className="text-left border rounded-xl px-4 py-3.5 text-sm flex-1 gap-1 sm:flex-col w-full h-auto justify-start items-start">
-            <span className="font-bold text-indigo-gradient">
+            <span className="font-bold text-cyan-gradient">
               {suggestedAction.title}{" "}
             </span>
             <span className="text-muted-foreground">

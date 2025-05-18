@@ -12,8 +12,8 @@ export default async function handler(
     return res.status(401).json({ message: "No autenticado" });
   }
 
-  // Verificar si el usuario es SUPERADMIN
-  if (session.role !== "SUPERADMIN") {
+  // Verificar si el usuario es SUPERADMIN o ADMIN
+  if (session.role !== "SUPERADMIN" && session.role !== "ADMIN") {
     return res.status(403).json({ message: "No autorizado" });
   }
 

@@ -39,7 +39,7 @@ export function TeamSwitcher({
           size="lg"
           className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
         >
-          <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-indigo-gradient text-sidebar-primary-foreground">
+          <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-cyan-gradient text-sidebar-primary-foreground">
             {/* <activeTeam.logo className="size-4" /> */}
             <Image src="/andex-logo.png" alt="logo" width={26} height={26} />
           </div>

@@ -79,7 +79,7 @@ export function ActualizarPreciosDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-indigo-gradient">
+          <DialogTitle className="text-2xl font-bold text-cyan-gradient">
             Actualizar Precios
           </DialogTitle>
         </DialogHeader>
@@ -141,7 +141,7 @@ export function ActualizarPreciosDialog({
             <Button
               type="submit"
               disabled={isLoading}
-              className="bg-indigo-gradient"
+              className="bg-cyan-gradient"
             >
               {isLoading ? "Actualizando..." : "Actualizar Precios"}
             </Button>

@@ -123,7 +123,7 @@ export function ClientDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-indigo-gradient">
+          <DialogTitle className="text-2xl font-bold text-cyan-gradient">
             {mode === "create" ? "Nuevo Cliente" : "Editar Cliente"}
           </DialogTitle>
         </DialogHeader>
@@ -272,7 +272,7 @@ export function ClientDialog({
 
           <Button
             type="submit"
-            className="w-full bg-indigo-gradient"
+            className="w-full bg-cyan-gradient"
             disabled={isLoading}
           >
             {isLoading

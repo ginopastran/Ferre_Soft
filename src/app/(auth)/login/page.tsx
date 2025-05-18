@@ -141,7 +141,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center">
       <div className="w-full max-w-md space-y-8 px-4">
         <div className="space-y-2 text-center">
-          <h1 className="text-3xl font-bold text-indigo-gradient">
+          <h1 className="text-3xl font-bold text-cyan-gradient">
             Iniciar Sesión
           </h1>
           <p className="text-gray-500">
@@ -179,7 +179,7 @@ export default function LoginPage() {
 
           <Button
             type="submit"
-            className="w-full bg-indigo-gradient"
+            className="w-full bg-cyan-gradient"
             disabled={isLoading}
           >
             {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
@@ -188,7 +188,7 @@ export default function LoginPage() {
 
         <div className="text-center text-sm">
           ¿No tienes una cuenta?{" "}
-          <Link href="/register" className="text-indigo-600 hover:underline">
+          <Link href="/register" className="text-cyan-600 hover:underline">
             Regístrate aquí
           </Link>
         </div>

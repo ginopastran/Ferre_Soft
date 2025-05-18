@@ -343,11 +343,11 @@ function ReporteContent() {
 
   return (
     <>
-      <header className="flex h-12 md:h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
+      <header className="flex  h-12 md:h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
         <div className="flex items-center gap-2 px-2 md:px-4">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-1 md:mr-2 h-4" />
-          <h2 className="text-3xl font-bold tracking-tight text-indigo-gradient">
+          <h2 className="text-3xl font-bold tracking-tight text-cyan-gradient">
             Reporte de ventas
           </h2>
         </div>
@@ -378,7 +378,7 @@ function ReporteContent() {
                     <CardTitle className="text-sm font-medium">
                       Ventas Totales
                     </CardTitle>
-                    <div className="bg-indigo-gradient rounded p-1">
+                    <div className="bg-cyan-gradient rounded p-1">
                       <DollarSign className="text-white size-5" />
                     </div>
                   </CardHeader>
@@ -404,7 +404,7 @@ function ReporteContent() {
                     <CardTitle className="text-sm font-medium">
                       Cantidad de Ventas
                     </CardTitle>
-                    <div className=" bg-indigo-gradient rounded p-1">
+                    <div className=" bg-cyan-gradient rounded p-1">
                       <HandCoins className="text-white size-5" />
                     </div>
                   </CardHeader>
@@ -430,7 +430,7 @@ function ReporteContent() {
                     <CardTitle className="text-sm font-medium">
                       Total margen de ganancia
                     </CardTitle>
-                    <div className=" bg-indigo-gradient rounded p-1">
+                    <div className=" bg-cyan-gradient rounded p-1">
                       <DollarSign className="text-white size-5" />
                     </div>
                   </CardHeader>
@@ -460,7 +460,7 @@ function ReporteContent() {
                 <CardTitle className="text-xl">
                   Resumen Anual de Ventas
                 </CardTitle>
-                <div className=" bg-indigo-gradient rounded p-1">
+                <div className=" bg-cyan-gradient rounded p-1">
                   <ChartBar className="text-white size-6 rotate-[270deg]" />
                 </div>
               </CardHeader>
@@ -473,7 +473,7 @@ function ReporteContent() {
                 <CardTitle className="text-xl">
                   Productos Más Vendidos
                 </CardTitle>
-                <div className=" bg-indigo-gradient rounded p-1">
+                <div className=" bg-cyan-gradient rounded p-1">
                   <ChartCandlestick className="text-white size-6 " />
                 </div>
               </CardHeader>
@@ -484,7 +484,7 @@ function ReporteContent() {
             {/* <Card className="col-span-1 md:col-span-2">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="">Métodos de Pago</CardTitle>
-                <div className=" bg-indigo-gradient rounded p-1">
+                <div className=" bg-cyan-gradient rounded p-1">
                   <PiggyBank className="text-white size-6 " />
                 </div>
               </CardHeader>

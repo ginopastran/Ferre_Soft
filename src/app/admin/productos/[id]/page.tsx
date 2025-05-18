@@ -101,7 +101,7 @@ export default function ProductPage() {
             <Button
               variant="outline"
               onClick={() => router.back()}
-              className="flex{ABBABA51-AF03-46CF-A253-D1107F7175D8}.png items-center bg-indigo-gradient text-white hover:text-white"
+              className="flex{ABBABA51-AF03-46CF-A253-D1107F7175D8}.png items-center bg-cyan-gradient text-white hover:text-white"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Volver a productos
@@ -119,7 +119,7 @@ export default function ProductPage() {
                 <div className="space-y-6">
                   <div className="flex flex-col md:flex-row justify-between items-start">
                     <div className="flex items-center gap-4 flex-wrap">
-                      <h2 className="text-3xl font-bold text-indigo-gradient">
+                      <h2 className="text-3xl font-bold text-cyan-gradient">
                         {product?.descripcion}
                       </h2>
                       <p className="text-sm text-muted-foreground">
@@ -133,7 +133,7 @@ export default function ProductPage() {
                     <Button
                       variant="outline"
                       onClick={() => setIsDialogOpen(true)}
-                      className="bg-indigo-gradient text-white hover:text-white hidden md:flex"
+                      className="bg-cyan-gradient text-white hover:text-white hidden md:flex"
                     >
                       <Pencil className="h-4 w-4 mr-2" />
                       Editar Producto
@@ -281,7 +281,7 @@ export default function ProductPage() {
                         <Button
                           variant="outline"
                           onClick={() => setIsDialogOpen(true)}
-                          className="bg-indigo-gradient text-white hover:text-white flex md:hidden"
+                          className="bg-cyan-gradient text-white hover:text-white flex md:hidden"
                         >
                           <Pencil className="h-4 w-4 mr-2" />
                           Editar Producto

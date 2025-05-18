@@ -46,7 +46,7 @@ export function UserMenu({ user }: UserMenuProps) {
           <Button
             variant="outline"
             size="icon"
-            className="h-10 w-10 rounded-lg [&_svg]:size-6 bg-indigo-gradient text-white hover:text-white"
+            className="h-10 w-10 rounded-lg [&_svg]:size-6 bg-cyan-gradient text-white hover:text-white"
           >
             <User />
           </Button>
