@@ -332,8 +332,8 @@ export default async function handler(
     const facturaData = {
       tipoComprobante: tipoComprobante,
       codigoComprobante: codigoComprobante,
-      razonSocial: "FERRESOFT S.A.",
-      domicilioComercial: "Av. Siempre Viva 123 - CABA",
+      razonSocial: "ANDES FUEGUINO S.A.S.",
+      // domicilioComercial: "Av. Siempre Viva 123 - CABA",
       condicionIVA: "Responsable inscripto",
       puntoVenta: "00003",
       compNro: factura.afipComprobante

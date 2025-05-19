@@ -16,7 +16,7 @@ interface FacturaTemplateProps {
   tipoComprobante: string;
   codigoComprobante: string;
   razonSocial: string;
-  domicilioComercial: string;
+  // domicilioComercial: string;
   condicionIVA: string;
   puntoVenta: string;
   compNro: string;
@@ -44,7 +44,7 @@ export const FacturaTemplate: React.FC<FacturaTemplateProps> = ({
   tipoComprobante,
   codigoComprobante,
   razonSocial,
-  domicilioComercial,
+  // domicilioComercial,
   condicionIVA,
   puntoVenta,
   compNro,
@@ -97,7 +97,7 @@ export const FacturaTemplate: React.FC<FacturaTemplateProps> = ({
           >
             <b>Razón Social:</b> {razonSocial}
             <br />
-            <b>Domicilio Comercial:</b> {domicilioComercial}
+            {/* <b>Domicilio Comercial:</b> {domicilioComercial} */}
             <br />
             <b>Condición frente al IVA:</b> {condicionIVA}
           </p>

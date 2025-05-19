@@ -124,9 +124,8 @@ export async function generatePDFContent(
         <div class="factura-container">
           <div class="header">
             <div class="tipo-comprobante">FACTURA ${tipoComprobante}</div>
-            <h1>FERRESOFT S.A.</h1>
-            <p>CUIT: ${process.env.AFIP_CUIT || "20461628312"}</p>
-            <p>Av. Siempre Viva 123 - CABA</p>
+            <h1>ANDES FUEGUINO S.A.S.</h1>
+            <p>CUIT: ${process.env.AFIP_CUIT || "20461628312"}</p>            
             <p>Responsable Inscripto</p>
           </div>
 

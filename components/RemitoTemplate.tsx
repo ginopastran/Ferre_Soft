@@ -10,7 +10,7 @@ interface RemitoTemplateProps {
   numero: string;
   fecha: string;
   razonSocial: string;
-  domicilioComercial: string;
+  // domicilioComercial: string;
   clienteNombre: string;
   clienteCuit: string;
   clienteDomicilio: string;
@@ -21,7 +21,7 @@ export const RemitoTemplate: React.FC<RemitoTemplateProps> = ({
   numero,
   fecha,
   razonSocial,
-  domicilioComercial,
+  // domicilioComercial,
   clienteNombre,
   clienteCuit,
   clienteDomicilio,
@@ -43,9 +43,9 @@ export const RemitoTemplate: React.FC<RemitoTemplateProps> = ({
           <p>
             <strong>Razón Social:</strong> {razonSocial}
           </p>
-          <p>
+          {/* <p>
             <strong>Domicilio:</strong> {domicilioComercial}
-          </p>
+          </p> */}
         </div>
 
         <div className="info-section">

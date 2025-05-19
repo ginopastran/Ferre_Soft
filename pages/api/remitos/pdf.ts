@@ -285,8 +285,8 @@ export default async function handler(
     const remitoData = {
       numero: remito.numero,
       fecha: fechaEmision,
-      razonSocial: "FERRESOFT S.A.",
-      domicilioComercial: "Av. Siempre Viva 123 - CABA",
+      razonSocial: "ANDES FUEGUINO S.A.S.",
+      // domicilioComercial: "Av. Siempre Viva 123 - CABA",
       clienteNombre: remito.cliente.nombre,
       clienteCuit: remito.cliente.cuitDni || "No especificado",
       clienteDomicilio: remito.cliente.direccion || "No especificado",
