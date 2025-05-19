@@ -39,14 +39,21 @@ export function TeamSwitcher({
           size="lg"
           className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
         >
-          <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-cyan-gradient text-sidebar-primary-foreground">
+          <div className="flex aspect-square size-8 items-center justify-center  text-sidebar-primary-foreground">
             {/* <activeTeam.logo className="size-4" /> */}
-            <Image src="/andex-logo.png" alt="logo" width={26} height={26} />
+            <Image
+              src="/andes-logo.jpeg"
+              alt="logo"
+              width={120}
+              height={120}
+              className=" rounded-lg"
+            />
           </div>
-          <div className="grid flex-1 text-left text-sm leading-tight">
+          <div className="grid flex-1 text-left text-cyan-gradient text-lg font-bold tracking-tighter uppercase">
             {/* <span className="truncate font-semibold">{activeTeam.name}</span>
             <span className="truncate text-xs">{activeTeam.plan}</span> */}
-            <Image src="/andex-text.png" alt="logo" width={100} height={100} />
+            Andes Fueguinos
+            {/* <Image src="/andes-logo.jpg" alt="logo" width={100} height={100} /> */}
           </div>
         </SidebarMenuButton>
       </SidebarMenuItem>

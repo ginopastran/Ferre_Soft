@@ -95,8 +95,8 @@ export function Overview() {
         <Bar dataKey="total" fill="url(#gradient)" radius={[4, 4, 0, 0]} />
         <defs>
           <linearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#4F46E5" />
-            <stop offset="100%" stopColor="#7C3AED" />
+            <stop offset="0%" stopColor="#0891b2" />
+            <stop offset="100%" stopColor="#155e75" />
           </linearGradient>
         </defs>
       </BarChart>
