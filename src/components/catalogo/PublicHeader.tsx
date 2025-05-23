@@ -20,7 +20,7 @@ export function PublicHeader() {
         <div className="flex justify-between h-16 items-center">
           <div className="flex-shrink-0">
             <Link href="/" className="text-2xl font-bold text-cyan-600">
-              FerreSoft
+              Andes Fueguino
             </Link>
           </div>
 

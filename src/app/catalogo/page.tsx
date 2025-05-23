@@ -1,16 +1,16 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, FileDown, Package2 } from "lucide-react";
 import { toast } from "sonner";
-import { formatCurrency } from "@/lib/utils/format";
+import { useInView } from "react-intersection-observer";
 import { CatalogoCard } from "@/components/catalogo/CatalogoCard";
 import { PublicHeader } from "@/components/catalogo/PublicHeader";
-import { jsPDF } from "jspdf";
-import html2canvas from "html2canvas";
+import { CatalogoPDF } from "@/components/catalogo/CatalogoPDF";
+import { pdf } from "@react-pdf/renderer";
 
 interface Producto {
   id: number;
@@ -22,175 +22,112 @@ interface Producto {
   rubro: string;
 }
 
+interface ProductosResponse {
+  productos: Producto[];
+  total: number;
+  hasMore: boolean;
+}
+
 export default function CatalogoPage() {
   const [productos, setProductos] = useState<Producto[]>([]);
-  const [filteredProductos, setFilteredProductos] = useState<Producto[]>([]);
+  const [allProductos, setAllProductos] = useState<Producto[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
-  const catalogoRef = useRef<HTMLDivElement>(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isLoadingPDF, setIsLoadingPDF] = useState(false);
+  const { ref: loadMoreRef, inView } = useInView();
+
+  const ITEMS_PER_PAGE = 12;
 
   useEffect(() => {
-    fetchProductos();
-  }, []);
+    const delayDebounceFn = setTimeout(() => {
+      setIsSearching(true);
+      setPage(1);
+      setProductos([]);
+      setHasMore(true);
+      fetchProductos(1, true);
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm]);
 
   useEffect(() => {
-    const results = productos.filter((producto) =>
-      Object.values({
-        codigo: producto.codigo,
-        descripcion: producto.descripcion,
-        rubro: producto.rubro,
-      }).some((value) =>
-        value?.toString().toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
-    setFilteredProductos(results);
-  }, [searchTerm, productos]);
+    if (inView && hasMore && !loading && !isSearching) {
+      setPage((prevPage) => prevPage + 1);
+    }
+  }, [inView, hasMore, loading, isSearching]);
 
-  const fetchProductos = async () => {
+  useEffect(() => {
+    if (page > 1 && hasMore && !isSearching) {
+      fetchProductos(page, false);
+    }
+  }, [page]);
+
+  const fetchProductos = async (pageNum: number, isNewSearch: boolean) => {
     try {
-      const response = await fetch("/api/productos/catalogo");
+      setLoading(true);
+      const response = await fetch(
+        `/api/productos/catalogo?page=${pageNum}&limit=${ITEMS_PER_PAGE}&search=${searchTerm}`
+      );
       if (!response.ok) throw new Error("Error al cargar productos");
-      const data = await response.json();
-      setProductos(data);
-      setFilteredProductos(data);
+      const data: ProductosResponse = await response.json();
+
+      setProductos((prev) =>
+        isNewSearch ? data.productos : [...prev, ...data.productos]
+      );
+      setHasMore(data.hasMore);
     } catch (error) {
       toast.error("Error al cargar el catálogo");
     } finally {
       setLoading(false);
+      setIsSearching(false);
     }
   };
 
-  const handleDownloadPDF = async () => {
-    if (!catalogoRef.current) return;
-
+  const generateAndDownloadPDF = async (productos: Producto[]) => {
     try {
-      toast.loading("Generando PDF...");
-
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
-      });
-
-      // Configuración de la página
-      const pageWidth = 210; // A4 width
-      const pageHeight = 297; // A4 height
-      const margin = 15;
-      const contentWidth = pageWidth - margin * 2;
-      const colWidth = (contentWidth - margin) / 2; // Ancho de cada columna
-
-      // Configurar fuente y tamaños
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(16);
-
-      // Agregar encabezado
-      pdf.setTextColor(0, 0, 0);
-      pdf.text("LISTA DE PRECIOS (SIN IVA)", pageWidth / 2, margin, {
-        align: "center",
-      });
-      pdf.setFontSize(12);
-      const fecha = new Date().toLocaleDateString();
-      pdf.text(fecha, pageWidth - margin, margin, { align: "right" });
-
-      let yPosition = margin + 20;
-      let currentPage = 1;
-      const itemHeight = 100; // Altura estimada para cada producto
-      const itemsPerPage =
-        Math.floor((pageHeight - margin * 3 - 20) / itemHeight) * 2; // Items por página (2 columnas)
-
-      // Procesar productos en pares (2 columnas)
-      for (let i = 0; i < filteredProductos.length; i += 2) {
-        // Nueva página si es necesario
-        if (i > 0 && i % itemsPerPage === 0) {
-          pdf.addPage();
-          yPosition = margin + 20;
-          currentPage++;
-        }
-
-        // Primera columna
-        const producto1 = filteredProductos[i];
-        if (producto1) {
-          const card1 = document.getElementById(`product-card-${producto1.id}`);
-          if (card1) {
-            const canvas1 = await html2canvas(card1, {
-              scale: 2,
-              useCORS: true,
-              logging: false,
-              backgroundColor: "#ffffff",
-            } as any);
-
-            const imgWidth1 = colWidth;
-            const imgHeight1 = (canvas1.height * colWidth) / canvas1.width;
-
-            pdf.addImage(
-              canvas1.toDataURL("image/jpeg", 1.0),
-              "JPEG",
-              margin,
-              yPosition,
-              imgWidth1,
-              imgHeight1,
-              "",
-              "FAST"
-            );
-          }
-        }
-
-        // Segunda columna
-        const producto2 = filteredProductos[i + 1];
-        if (producto2) {
-          const card2 = document.getElementById(`product-card-${producto2.id}`);
-          if (card2) {
-            const canvas2 = await html2canvas(card2, {
-              scale: 2,
-              useCORS: true,
-              logging: false,
-              backgroundColor: "#ffffff",
-            } as any);
-
-            const imgWidth2 = colWidth;
-            const imgHeight2 = (canvas2.height * colWidth) / canvas2.width;
-
-            pdf.addImage(
-              canvas2.toDataURL("image/jpeg", 1.0),
-              "JPEG",
-              margin + colWidth + margin,
-              yPosition,
-              imgWidth2,
-              imgHeight2,
-              "",
-              "FAST"
-            );
-          }
-        }
-
-        // Actualizar posición Y para la siguiente fila
-        const maxHeight = Math.max(
-          document.getElementById(`product-card-${producto1.id}`)
-            ?.offsetHeight || 0,
-          document.getElementById(`product-card-${producto2?.id}`)
-            ?.offsetHeight || 0
-        );
-        yPosition +=
-          (maxHeight * colWidth) /
-            (document.getElementById(`product-card-${producto1.id}`)
-              ?.offsetWidth || colWidth) +
-          10;
-
-        // Agregar número de página
-        pdf.setFontSize(8);
-        pdf.text(`Página ${currentPage}`, pageWidth / 2, pageHeight - margin, {
-          align: "center",
-        });
-      }
-
-      pdf.save("lista-de-precios.pdf");
-
-      toast.dismiss();
-      toast.success("PDF generado exitosamente");
+      setIsLoadingPDF(true);
+      const blob = await pdf(<CatalogoPDF productos={productos} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "lista-de-precios.pdf";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     } catch (error) {
-      toast.dismiss();
-      toast.error("Error al generar el PDF");
-      console.error(error);
+      console.error("Error al generar PDF:", error);
+      toast.error("Error al generar el PDF. Por favor intente nuevamente.");
+    } finally {
+      setIsLoadingPDF(false);
+    }
+  };
+
+  const fetchAllProductos = async () => {
+    try {
+      setIsLoadingPDF(true);
+      const response = await fetch(
+        `/api/productos/catalogo?all=true&search=${searchTerm}`
+      );
+      if (!response.ok) throw new Error("Error al cargar productos");
+      const data = await response.json();
+      if (!data.productos || !Array.isArray(data.productos)) {
+        throw new Error("Formato de datos inválido");
+      }
+      const productos = data.productos;
+      setAllProductos(productos);
+      await generateAndDownloadPDF(productos);
+    } catch (error) {
+      console.error("Error al cargar todos los productos:", error);
+      toast.error(
+        "Error al cargar los productos. Por favor intente nuevamente."
+      );
+      setAllProductos([]);
+    } finally {
+      setIsLoadingPDF(false);
     }
   };
 
@@ -205,11 +142,12 @@ export default function CatalogoPage() {
               Catálogo de Productos (Precios sin IVA)
             </h1>
             <Button
-              onClick={handleDownloadPDF}
+              onClick={fetchAllProductos}
+              disabled={isLoadingPDF}
               className="bg-cyan-600 hover:bg-cyan-700"
             >
               <FileDown className="h-4 w-4 mr-2" />
-              Descargar PDF
+              {isLoadingPDF ? "Generando PDF..." : "Descargar PDF"}
             </Button>
           </div>
 
@@ -226,31 +164,27 @@ export default function CatalogoPage() {
             </div>
           </div>
 
-          <div
-            ref={catalogoRef}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-          >
-            {loading ? (
-              <>
-                {[...Array(6)].map((_, index) => (
-                  <Card key={index} className="w-full">
-                    <CardContent className="p-6">
-                      <div className="animate-pulse space-y-4">
-                        <div className="h-40 bg-gray-200 rounded" />
-                        <div className="h-4 bg-gray-200 rounded w-3/4" />
-                        <div className="h-4 bg-gray-200 rounded w-1/2" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </>
-            ) : filteredProductos.length > 0 ? (
-              filteredProductos.map((producto) => (
-                <div key={producto.id} id={`product-card-${producto.id}`}>
-                  <CatalogoCard producto={producto} />
-                </div>
-              ))
-            ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {productos.map((producto) => (
+              <div key={producto.id}>
+                <CatalogoCard producto={producto} />
+              </div>
+            ))}
+
+            {loading &&
+              [...Array(6)].map((_, index) => (
+                <Card key={`skeleton-${index}`} className="w-full">
+                  <CardContent className="p-6">
+                    <div className="animate-pulse space-y-4">
+                      <div className="h-40 bg-gray-200 rounded" />
+                      <div className="h-4 bg-gray-200 rounded w-3/4" />
+                      <div className="h-4 bg-gray-200 rounded w-1/2" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+
+            {!loading && productos.length === 0 && (
               <div className="col-span-full text-center text-muted-foreground">
                 <Package2 className="mx-auto h-12 w-12 text-gray-400" />
                 <h3 className="mt-2 text-sm font-semibold">
@@ -260,6 +194,10 @@ export default function CatalogoPage() {
                   Intenta con otra búsqueda o revisa más tarde.
                 </p>
               </div>
+            )}
+
+            {hasMore && (
+              <div ref={loadMoreRef} className="col-span-full h-10" />
             )}
           </div>
         </div>

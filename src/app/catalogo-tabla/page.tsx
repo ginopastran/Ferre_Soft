@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileSpreadsheet } from "lucide-react";
+import { FileSpreadsheet, Search } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { PublicHeader } from "@/components/catalogo/PublicHeader";
+import { Input } from "@/components/ui/input";
+import { RubroToggleGroup } from "@/components/catalogo/RubroToggleGroup";
 
 interface Producto {
   id: number;
@@ -18,11 +19,19 @@ interface Producto {
   rubro: string;
 }
 
+interface ProductosResponse {
+  productos: Producto[];
+  total: number;
+  hasMore: boolean;
+}
+
 export default function CatalogoTablaPage() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [rubros, setRubros] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<string>("todos");
+  const [activeRubro, setActiveRubro] = useState<string>("todos");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isGeneratingExcel, setIsGeneratingExcel] = useState(false);
 
   useEffect(() => {
     fetchProductos();
@@ -31,47 +40,57 @@ export default function CatalogoTablaPage() {
   const fetchProductos = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/productos/catalogo");
+      const response = await fetch("/api/productos/catalogo?all=true");
       if (!response.ok) {
         throw new Error("Error al cargar los productos");
       }
-      const data = await response.json();
-      setProductos(data);
+      const data: ProductosResponse = await response.json();
+
+      if (!data.productos) {
+        throw new Error("Formato de datos inválido");
+      }
+
+      setProductos(data.productos);
 
       // Extraer rubros únicos
       const uniqueRubros = Array.from(
-        new Set(data.map((producto: Producto) => producto.rubro))
-      ).sort() as string[];
+        new Set(data.productos.map((producto) => producto.rubro))
+      ).sort();
       setRubros(uniqueRubros);
-
-      setLoading(false);
     } catch (error) {
       console.error("Error:", error);
       toast.error("Error al cargar los productos");
+    } finally {
       setLoading(false);
     }
   };
 
-  const handleDownloadExcel = () => {
+  const handleDownloadExcel = async () => {
     try {
+      setIsGeneratingExcel(true);
       toast.loading("Generando archivo Excel...");
 
-      // Filtrar productos por rubro si no está en "todos"
-      const productosToExport =
-        activeTab === "todos"
-          ? productos
-          : productos.filter((p) => p.rubro === activeTab);
+      // Filtrar productos por rubro y búsqueda
+      const productosToExport = productos
+        .filter((p) => activeRubro === "todos" || p.rubro === activeRubro)
+        .filter(
+          (p) =>
+            searchTerm === "" ||
+            p.descripcion.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            p.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            p.rubro.toLowerCase().includes(searchTerm.toLowerCase())
+        );
 
       // Preparar datos para Excel
       const workbookData = productosToExport.map((producto) => {
-        // Calcular el precio sin IVA
         const precioSinIva = producto.precioFinal1 / (1 + producto.iva / 100);
-
         return {
           CÓDIGO: producto.codigo,
           DESCRIPCIÓN: producto.descripcion,
           RUBRO: producto.rubro,
-          "PRECIO SIN IVA": precioSinIva.toFixed(4),
+          "PRECIO SIN IVA": precioSinIva.toFixed(2),
+          "IVA %": producto.iva,
+          "PRECIO FINAL": producto.precioFinal1.toFixed(2),
         };
       });
 
@@ -83,9 +102,11 @@ export default function CatalogoTablaPage() {
       // Ajustar anchos de columna
       const columnsWidth = [
         { wch: 15 }, // CÓDIGO
-        { wch: 40 }, // DESCRIPCIÓN
+        { wch: 50 }, // DESCRIPCIÓN
         { wch: 20 }, // RUBRO
         { wch: 15 }, // PRECIO SIN IVA
+        { wch: 10 }, // IVA %
+        { wch: 15 }, // PRECIO FINAL
       ];
       worksheet["!cols"] = columnsWidth;
 
@@ -98,6 +119,8 @@ export default function CatalogoTablaPage() {
       console.error("Error al generar Excel:", error);
       toast.dismiss();
       toast.error("Error al generar el archivo Excel");
+    } finally {
+      setIsGeneratingExcel(false);
     }
   };
 
@@ -105,16 +128,25 @@ export default function CatalogoTablaPage() {
     return new Intl.NumberFormat("es-AR", {
       style: "currency",
       currency: "ARS",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(value);
   };
 
-  // Función para calcular el precio sin IVA
   const calcularPrecioSinIva = (precio: number, iva: number) => {
     return precio / (1 + iva / 100);
   };
 
-  const getProductosPorRubro = (rubro: string) => {
-    return productos.filter((producto) => producto.rubro === rubro);
+  const getProductosFiltrados = (rubro?: string) => {
+    return productos
+      .filter((p) => !rubro || p.rubro === rubro)
+      .filter(
+        (p) =>
+          searchTerm === "" ||
+          p.descripcion.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          p.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          p.rubro.toLowerCase().includes(searchTerm.toLowerCase())
+      );
   };
 
   if (loading) {
@@ -136,108 +168,96 @@ export default function CatalogoTablaPage() {
           </h1>
           <Button
             onClick={handleDownloadExcel}
+            disabled={isGeneratingExcel}
             className="bg-green-600 hover:bg-green-700"
           >
             <FileSpreadsheet className="mr-2 h-4 w-4" />
-            Descargar Excel
+            {isGeneratingExcel ? "Generando..." : "Descargar Excel"}
           </Button>
         </div>
 
-        <Tabs defaultValue="todos" onValueChange={setActiveTab}>
-          <TabsList className="mb-6 flex flex-wrap">
-            <TabsTrigger value="todos">Todos</TabsTrigger>
-            {rubros.map((rubro) => (
-              <TabsTrigger key={rubro} value={rubro}>
-                {rubro}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+        <div className="mb-6">
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Buscar por código, descripción o rubro..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
 
-          <TabsContent value="todos">
-            <div className="overflow-x-auto">
-              {rubros.map((rubro) => (
-                <div key={rubro} className="mb-8">
-                  <h2 className="text-xl font-bold mb-4 bg-cyan-600 text-white py-2 px-4 rounded">
-                    {rubro}
-                  </h2>
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr className="bg-gray-100">
-                          <th className="border px-4 py-2 text-left">Código</th>
-                          <th className="border px-4 py-2 text-left">
-                            Descripción
-                          </th>
-                          <th className="border px-4 py-2 text-right">
-                            Precio sin IVA
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {getProductosPorRubro(rubro).map((producto) => (
-                          <tr key={producto.id} className="hover:bg-gray-50">
-                            <td className="border px-4 py-2">
-                              {producto.codigo}
-                            </td>
-                            <td className="border px-4 py-2">
-                              {producto.descripcion}
-                            </td>
-                            <td className="border px-4 py-2 text-right font-semibold">
-                              {formatCurrency(
-                                calcularPrecioSinIva(
-                                  producto.precioFinal1,
-                                  producto.iva
-                                )
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </TabsContent>
+        <div className="mb-6">
+          <RubroToggleGroup
+            rubros={rubros}
+            activeRubro={activeRubro}
+            onRubroChange={setActiveRubro}
+            getProductosCount={(rubro) => getProductosFiltrados(rubro).length}
+          />
+        </div>
 
-          {rubros.map((rubro) => (
-            <TabsContent key={rubro} value={rubro}>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="border px-4 py-2 text-left">Código</th>
-                      <th className="border px-4 py-2 text-left">
-                        Descripción
-                      </th>
-                      <th className="border px-4 py-2 text-right">
-                        Precio sin IVA
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {getProductosPorRubro(rubro).map((producto) => (
-                      <tr key={producto.id} className="hover:bg-gray-50">
-                        <td className="border px-4 py-2">{producto.codigo}</td>
-                        <td className="border px-4 py-2">
-                          {producto.descripcion}
-                        </td>
-                        <td className="border px-4 py-2 text-right font-semibold">
-                          {formatCurrency(
-                            calcularPrecioSinIva(
-                              producto.precioFinal1,
-                              producto.iva
-                            )
-                          )}
-                        </td>
+        <div className="overflow-x-auto">
+          {rubros.map((rubro) => {
+            const productosFiltrados = getProductosFiltrados(rubro);
+            if (activeRubro !== "todos" && activeRubro !== rubro) return null;
+            if (productosFiltrados.length === 0) return null;
+
+            return (
+              <div key={rubro} className="mb-8">
+                <h2 className="text-xl font-bold mb-4 bg-cyan-600 text-white py-2 px-4 rounded">
+                  {rubro}
+                </h2>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="bg-gray-100">
+                        <th className="border px-4 py-2 text-left">Código</th>
+                        <th className="border px-4 py-2 text-left">
+                          Descripción
+                        </th>
+                        <th className="border px-4 py-2 text-right">
+                          Precio sin IVA
+                        </th>
+                        <th className="border px-4 py-2 text-right">IVA</th>
+                        <th className="border px-4 py-2 text-right">
+                          Precio Final
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {productosFiltrados.map((producto) => (
+                        <tr key={producto.id} className="hover:bg-gray-50">
+                          <td className="border px-4 py-2">
+                            {producto.codigo}
+                          </td>
+                          <td className="border px-4 py-2">
+                            {producto.descripcion}
+                          </td>
+                          <td className="border px-4 py-2 text-right">
+                            {formatCurrency(
+                              calcularPrecioSinIva(
+                                producto.precioFinal1,
+                                producto.iva
+                              )
+                            )}
+                          </td>
+                          <td className="border px-4 py-2 text-right">
+                            {producto.iva}%
+                          </td>
+                          <td className="border px-4 py-2 text-right font-semibold">
+                            {formatCurrency(producto.precioFinal1)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </TabsContent>
-          ))}
-        </Tabs>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
