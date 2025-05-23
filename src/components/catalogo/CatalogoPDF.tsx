@@ -142,7 +142,10 @@ export const CatalogoPDF = ({ productos }: CatalogoPDFProps) => {
         <Page key={pageIndex} size="A4" style={styles.page}>
           {pageIndex === 0 && (
             <View style={styles.headerContainer}>
-              <Image style={styles.logo} src="/andes-logo.jpeg" />
+              <Image
+                style={styles.logo}
+                src={`${process.env.NEXT_PUBLIC_BASE_URL}/andes-logo.jpeg`}
+              />
               <Text style={styles.header}>
                 LISTA DE PRECIOS (SIN IVA) {new Date().toLocaleDateString()}
               </Text>
