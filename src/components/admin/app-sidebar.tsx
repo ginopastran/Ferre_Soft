@@ -22,6 +22,7 @@ import {
   Shield,
   MessageSquare,
   Mail,
+  PackageCheck,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMemo } from "react";
@@ -62,6 +63,11 @@ const data = {
       title: "Productos",
       url: "/admin/productos",
       icon: Package,
+    },
+    {
+      title: "Stock",
+      url: "/admin/stock",
+      icon: PackageCheck,
     },
     {
       title: "Proveedores",
@@ -134,6 +140,11 @@ export function AppSidebar({ activeUrl, ...props }: AppSidebarProps) {
         title: "Productos",
         url: "/admin/productos",
         icon: Package,
+      },
+      {
+        title: "Stock",
+        url: "/admin/stock",
+        icon: PackageCheck,
       },
       {
         title: "Proveedores",

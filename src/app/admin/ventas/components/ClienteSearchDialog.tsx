@@ -200,7 +200,8 @@ export function ClienteSearchDialog({
                     currentClientes.map((cliente) => (
                       <tr
                         key={cliente.id}
-                        className="border-b hover:bg-muted/50 transition-colors"
+                        className="border-b hover:bg-muted/50 transition-colors cursor-pointer"
+                        onClick={() => handleClienteSelect(cliente)}
                       >
                         <td className="py-1 sm:py-2 px-1 sm:px-2 text-xs sm:text-sm">
                           {cliente.codigo}
@@ -211,11 +212,14 @@ export function ClienteSearchDialog({
                         <td className="py-1 sm:py-2 px-1 sm:px-2 text-xs sm:text-sm">
                           {cliente.situacionIVA}
                         </td>
-                        <td className="py-1 sm:py-2 px-1 sm:px-2 text-right">
+                        <td className="py-1 sm:py-2 px-1 sm:px-2 text-right hidden sm:table-cell">
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleClienteSelect(cliente)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleClienteSelect(cliente);
+                            }}
                             className="bg-cyan-gradient text-white hover:text-white px-1 sm:px-3 py-0 h-7 text-xs sm:text-sm whitespace-nowrap"
                           >
                             Elegir

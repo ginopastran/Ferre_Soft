@@ -135,7 +135,7 @@ export function PagoDialog({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="EFECTIVO">Efectivo</SelectItem>
-                <SelectItem value="TARJETA">Tarjeta</SelectItem>
+                <SelectItem value="CHEQUE">Cheque</SelectItem>
                 <SelectItem value="TRANSFERENCIA">Transferencia</SelectItem>
               </SelectContent>
             </Select>

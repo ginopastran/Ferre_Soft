@@ -7,7 +7,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Plus, Search, Filter, X } from "lucide-react";
+import { Plus, Search, Filter, X, Link } from "lucide-react";
 import { useState, useEffect } from "react";
 import { FacturaDialog } from "./components/FacturaDialog";
 import { FacturaCard } from "@/components/admin/ventas/FacturaCard";
@@ -178,6 +178,30 @@ function VentasContent() {
           <h2 className="text-3xl font-bold tracking-tight text-cyan-gradient">
             Ventas
           </h2>
+          <Button
+            variant="outline"
+            size="sm"
+            className="ml-auto mr-4 bg-cyan-gradient text-white hover:text-white shadow-md"
+            onClick={() => {
+              const catalogoUrl = `${window.location.origin}/catalogo`;
+              if (navigator.share) {
+                navigator
+                  .share({
+                    title: "Catálogo de Productos",
+                    url: catalogoUrl,
+                  })
+                  .catch((error) =>
+                    toast.error("Error al compartir: " + error)
+                  );
+              } else {
+                navigator.clipboard.writeText(catalogoUrl);
+                toast.success("Enlace copiado al portapapeles");
+              }
+            }}
+          >
+            Compartir catálogo
+            <Link className=" h-4 w-4" />
+          </Button>
         </div>
       </header>
       <div className="h-full flex-1 flex-col space-y-8 p-4 md:p-8 flex">

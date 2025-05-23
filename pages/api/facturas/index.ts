@@ -371,6 +371,29 @@ export default async function handler(
       // Crear la factura en la base de datos
       try {
         const nuevaFactura = await prisma.$transaction(async (tx) => {
+          // Verificar stock disponible antes de crear la factura
+          for (const detalle of detalles) {
+            const producto = await tx.producto.findUnique({
+              where: { id: Number(detalle.productoId) },
+            });
+
+            if (!producto) {
+              throw new Error(
+                `Producto con ID ${detalle.productoId} no encontrado`
+              );
+            }
+
+            // Solo validar stock si es una venta (no es nota de crédito o similar)
+            if (!req.body.aumentaStock) {
+              const stockFinal = producto.stock - Number(detalle.cantidad);
+              if (stockFinal < 0) {
+                throw new Error(
+                  `Stock insuficiente para el producto ${producto.descripcion}. Stock actual: ${producto.stock}`
+                );
+              }
+            }
+          }
+
           // Datos adicionales de AFIP
           const datosAdicionalesAfip = datosAfip
             ? {
@@ -379,11 +402,6 @@ export default async function handler(
                 afipComprobante: datosAfip.numeroComprobante,
               }
             : {};
-
-          console.log(
-            "Datos adicionales de AFIP para guardado:",
-            datosAdicionalesAfip
-          );
 
           // Crear la factura
           const factura = await tx.factura.create({
@@ -429,16 +447,32 @@ export default async function handler(
 
           // Actualizar stock
           for (const detalle of detalles) {
-            await tx.producto.update({
+            const producto = await tx.producto.findUnique({
               where: { id: Number(detalle.productoId) },
-              data: {
-                stock: {
-                  [req.body.aumentaStock ? "increment" : "decrement"]: Number(
-                    detalle.cantidad
-                  ),
-                },
-              },
+              select: { stock: true },
             });
+
+            if (!producto) continue;
+
+            // Si es una venta normal, decrementar stock
+            if (!req.body.aumentaStock) {
+              await tx.producto.update({
+                where: { id: Number(detalle.productoId) },
+                data: {
+                  stock: Math.max(0, producto.stock - Number(detalle.cantidad)),
+                },
+              });
+            } else {
+              // Si es una nota de crédito o devolución, incrementar stock
+              await tx.producto.update({
+                where: { id: Number(detalle.productoId) },
+                data: {
+                  stock: {
+                    increment: Number(detalle.cantidad),
+                  },
+                },
+              });
+            }
           }
 
           return factura;

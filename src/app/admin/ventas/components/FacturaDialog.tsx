@@ -3,6 +3,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,6 +79,7 @@ export function FacturaDialog({
   const [descuento, setDescuento] = useState<string>("");
   const { user } = useAuth();
   const [isClienteSearchOpen, setIsClienteSearchOpen] = useState(false);
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -235,24 +238,16 @@ export function FacturaDialog({
       return;
     }
 
-    // Convertir descuento a número para enviarlo a la API
-    const descuentoNum = descuento === "" ? 0 : parseFloat(descuento);
+    // En lugar de enviar directamente, abrimos el diálogo de confirmación
+    setIsConfirmDialogOpen(true);
+  };
 
-    console.log("Datos a enviar:", {
-      clienteId,
-      tipoComprobante,
-      vendedorId: user?.id,
-      aumentaStock,
-      descuento: descuentoNum,
-      detalles: detalles.map(({ productoId, cantidad, precioUnitario }) => ({
-        productoId,
-        cantidad,
-        precioUnitario,
-      })),
-    });
-
+  const handleConfirmSubmit = async () => {
     setIsLoading(true);
     try {
+      // Convertir descuento a número para enviarlo a la API
+      const descuentoNum = descuento === "" ? 0 : parseFloat(descuento);
+
       await onSubmit({
         clienteId: Number(clienteId),
         tipoComprobante,
@@ -271,6 +266,7 @@ export function FacturaDialog({
       toast.error("Error al crear la factura");
     } finally {
       setIsLoading(false);
+      setIsConfirmDialogOpen(false);
     }
   };
 
@@ -340,282 +336,369 @@ export function FacturaDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-cyan-gradient">
-            {aumentaStock ? "Nueva Nota de Crédito" : "Nueva Factura"}
-          </DialogTitle>
-          {aumentaStock && (
-            <p className="text-sm text-muted-foreground mt-1">
-              Esta operación aumentará el stock de los productos seleccionados.
-            </p>
-          )}
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-auto p-3 sm:p-6">
+          <DialogHeader>
+            <DialogTitle className="text-xl sm:text-2xl font-bold text-cyan-gradient">
+              {aumentaStock ? "Nueva Nota de Crédito" : "Nueva Factura"}
+            </DialogTitle>
+            {aumentaStock && (
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                Esta operación aumentará el stock de los productos
+                seleccionados.
+              </p>
+            )}
+          </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Cliente</label>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => setIsClienteSearchOpen(true)}
-                >
-                  {clienteSeleccionado
-                    ? `${clienteSeleccionado.nombre} - ${clienteSeleccionado.codigo}`
-                    : "Seleccione un cliente"}
-                </Button>
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              <div className="space-y-1 sm:space-y-2">
+                <label className="text-xs sm:text-sm font-medium">
+                  Cliente
+                </label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full text-xs sm:text-sm h-8 sm:h-10"
+                    onClick={() => setIsClienteSearchOpen(true)}
+                  >
+                    {clienteSeleccionado
+                      ? `${clienteSeleccionado.nombre} - ${clienteSeleccionado.codigo}`
+                      : "Seleccione un cliente"}
+                  </Button>
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Tipo de Comprobante</label>
-              <Select
-                value={tipoComprobante}
-                onValueChange={handleTipoComprobanteChange}
-                disabled={isLoading || !clienteId}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccione tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="FACTURA_A">Factura A</SelectItem>
-                  <SelectItem value="REMITO">Remito</SelectItem>
-                  {/* <SelectItem value="NOTA_CREDITO_C">
-                    Nota de Crédito C
-                  </SelectItem> */}
-                  <SelectItem value="NOTA_CREDITO_A">
-                    Nota de Crédito A (+ Stock)
-                  </SelectItem>
-                  <SelectItem value="NOTA_CREDITO_REMITO">
-                    Nota de Crédito Remito (+ Stock)
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Lista de Precios</label>
-              <Select
-                value={listaPrecio}
-                onValueChange={(value: "1" | "2") => setListaPrecio(value)}
-                disabled={isLoading}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccione lista" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">Lista 1</SelectItem>
-                  <SelectItem value="2">Lista 2</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Descuento (%)</label>
-              <Input
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                value={descuento}
-                onChange={(e) => handleDescuentoChange(e.target.value)}
-                className="w-full"
-                disabled={isLoading}
-                placeholder="0"
-              />
-            </div>
-
-            {(tipoComprobante === "REMITO" ||
-              tipoComprobante === "NOTA_CREDITO_REMITO") && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  Tipo de IVA para{" "}
-                  {tipoComprobante === "REMITO"
-                    ? "Remito"
-                    : "Nota de Crédito Remito"}
+              <div className="space-y-1 sm:space-y-2">
+                <label className="text-xs sm:text-sm font-medium">
+                  Tipo de Comprobante
                 </label>
                 <Select
-                  value={tipoIvaRemito}
-                  onValueChange={(value: "sin_iva" | "iva_10_5" | "iva_21") =>
-                    setTipoIvaRemito(value)
-                  }
-                  disabled={isLoading}
+                  value={tipoComprobante}
+                  onValueChange={handleTipoComprobanteChange}
+                  disabled={isLoading || !clienteId}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccione tipo de IVA" />
+                  <SelectTrigger className="h-8 sm:h-10 text-xs sm:text-sm">
+                    <SelectValue placeholder="Seleccione tipo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="sin_iva">Sin IVA</SelectItem>
-                    <SelectItem value="iva_10_5">Con IVA 10,5%</SelectItem>
-                    <SelectItem value="iva_21">Con IVA 21%</SelectItem>
+                    <SelectItem value="FACTURA_A">Factura A</SelectItem>
+                    <SelectItem value="REMITO">Remito</SelectItem>
+                    <SelectItem value="NOTA_CREDITO_A">
+                      Nota de Crédito A (+ Stock)
+                    </SelectItem>
+                    <SelectItem value="NOTA_CREDITO_REMITO">
+                      Nota de Crédito Remito (+ Stock)
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-            )}
+
+              <div className="space-y-1 sm:space-y-2">
+                <label className="text-xs sm:text-sm font-medium">
+                  Lista de Precios
+                </label>
+                <Select
+                  value={listaPrecio}
+                  onValueChange={(value: "1" | "2") => setListaPrecio(value)}
+                  disabled={isLoading}
+                >
+                  <SelectTrigger className="h-8 sm:h-10 text-xs sm:text-sm">
+                    <SelectValue placeholder="Seleccione lista" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">Lista 1</SelectItem>
+                    <SelectItem value="2">Lista 2</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1 sm:space-y-2">
+                <label className="text-xs sm:text-sm font-medium">
+                  Descuento (%)
+                </label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={descuento}
+                  onChange={(e) => handleDescuentoChange(e.target.value)}
+                  className="w-full h-8 sm:h-10 text-xs sm:text-sm"
+                  disabled={isLoading}
+                  placeholder="0"
+                />
+              </div>
+
+              {(tipoComprobante === "REMITO" ||
+                tipoComprobante === "NOTA_CREDITO_REMITO") && (
+                <div className="space-y-1 sm:space-y-2">
+                  <label className="text-xs sm:text-sm font-medium">
+                    Tipo de IVA para{" "}
+                    {tipoComprobante === "REMITO"
+                      ? "Remito"
+                      : "Nota de Crédito Remito"}
+                  </label>
+                  <Select
+                    value={tipoIvaRemito}
+                    onValueChange={(value: "sin_iva" | "iva_10_5" | "iva_21") =>
+                      setTipoIvaRemito(value)
+                    }
+                    disabled={isLoading}
+                  >
+                    <SelectTrigger className="h-8 sm:h-10 text-xs sm:text-sm">
+                      <SelectValue placeholder="Seleccione tipo de IVA" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sin_iva">Sin IVA</SelectItem>
+                      <SelectItem value="iva_10_5">Con IVA 10,5%</SelectItem>
+                      <SelectItem value="iva_21">Con IVA 21%</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
 
             {aumentaStock && (
-              <div className="md:col-span-3 bg-blue-50 p-3 rounded-md border border-blue-200 mt-2">
-                <p className="text-blue-700 text-sm flex items-center">
-                  <Info className="mr-2 h-4 w-4" />
+              <div className="bg-blue-50 p-2 sm:p-3 rounded-md border border-blue-200">
+                <p className="text-blue-700 text-xs sm:text-sm flex items-center">
+                  <Info className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                   Este tipo de comprobante&nbsp;
                   <span className="font-bold">aumentará</span>&nbsp;el stock de
                   los productos seleccionados.
                 </p>
               </div>
             )}
-          </div>
 
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold">Productos</h3>
-              <div className="flex items-center gap-4">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <h3 className="text-base sm:text-lg font-semibold">
+                  Productos
+                </h3>
                 <Button
                   type="button"
                   onClick={handleAddProducto}
                   disabled={isLoading}
-                  className="bg-cyan-gradient"
+                  className="bg-cyan-gradient w-full sm:w-auto h-8 sm:h-10 text-xs sm:text-sm"
                 >
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                   Agregar Producto
                 </Button>
               </div>
-            </div>
 
-            <div className="border rounded-md">
-              <table className="w-full">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="text-left p-2">Producto</th>
-                    <th className="text-center p-2">Cantidad</th>
-                    <th className="text-right p-2">Precio</th>
-                    <th className="text-right p-2">Subtotal</th>
-                    <th className="p-2"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {detalles.length === 0 ? (
+              <div className="border rounded-md overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-muted/50">
                     <tr>
-                      <td
-                        colSpan={5}
-                        className="text-center py-4 text-muted-foreground"
-                      >
-                        No hay productos agregados
-                      </td>
+                      <th className="text-left p-2 text-xs sm:text-sm whitespace-nowrap">
+                        Producto
+                      </th>
+                      <th className="text-center p-2 text-xs sm:text-sm whitespace-nowrap">
+                        Cantidad
+                      </th>
+                      <th className="text-right p-2 text-xs sm:text-sm whitespace-nowrap">
+                        Precio
+                      </th>
+                      <th className="text-right p-2 text-xs sm:text-sm whitespace-nowrap">
+                        Subtotal
+                      </th>
+                      <th className="p-2"></th>
                     </tr>
-                  ) : (
-                    detalles.map((detalle, index) => (
-                      <tr key={index} className="border-t">
-                        <td className="p-2">
-                          {detalle.producto.codigo} -{" "}
-                          {detalle.producto.descripcion}
-                        </td>
-                        <td className="p-2">
-                          <Input
-                            type="number"
-                            min="1"
-                            value={detalle.cantidad}
-                            onChange={(e) =>
-                              handleCantidadChange(index, e.target.value)
-                            }
-                            className="w-20 mx-auto text-center"
-                            disabled={isLoading}
-                          />
-                        </td>
-                        <td className="p-2 text-right">
-                          {formatCurrency(detalle.precioUnitario)}
-                        </td>
-                        <td className="p-2 text-right">
-                          {formatCurrency(detalle.subtotal)}
-                        </td>
-                        <td className="p-2 text-right">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRemoveProducto(index)}
-                            disabled={isLoading}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
+                  </thead>
+                  <tbody>
+                    {detalles.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={5}
+                          className="text-center py-4 text-muted-foreground text-xs sm:text-sm"
+                        >
+                          No hay productos agregados
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-                <tfoot>
-                  <tr className="border-t">
-                    <td colSpan={3} className="p-2 text-right font-semibold">
-                      Subtotal:
-                    </td>
-                    <td className="p-2 text-right font-semibold">
-                      {formatCurrency(subtotal)}
-                    </td>
-                    <td></td>
-                  </tr>
-                  <tr>
-                    <td colSpan={3} className="p-2 text-right font-semibold">
-                      Descuento ({descuento || "0"}%):
-                    </td>
-                    <td className="p-2 text-right font-semibold">
-                      {formatCurrency(descuentoValor)}
-                    </td>
-                    <td></td>
-                  </tr>
-                  <tr className="border-t">
-                    <td colSpan={3} className="p-2 text-right font-semibold">
-                      Total Final:
-                    </td>
-                    <td className="p-2 text-right font-semibold text-lg text-cyan-600">
-                      {formatCurrency(total)}
-                    </td>
-                    <td></td>
-                  </tr>
-                </tfoot>
-              </table>
+                    ) : (
+                      detalles.map((detalle, index) => (
+                        <tr key={index} className="border-t">
+                          <td className="p-2 text-xs sm:text-sm">
+                            {detalle.producto.codigo} -{" "}
+                            {detalle.producto.descripcion}
+                          </td>
+                          <td className="p-2">
+                            <Input
+                              type="number"
+                              min="1"
+                              value={detalle.cantidad}
+                              onChange={(e) =>
+                                handleCantidadChange(index, e.target.value)
+                              }
+                              className="w-16 sm:w-20 mx-auto text-center h-8 sm:h-10 text-xs sm:text-sm"
+                              disabled={isLoading}
+                            />
+                          </td>
+                          <td className="p-2 text-right text-xs sm:text-sm">
+                            {formatCurrency(detalle.precioUnitario)}
+                          </td>
+                          <td className="p-2 text-right text-xs sm:text-sm">
+                            {formatCurrency(detalle.subtotal)}
+                          </td>
+                          <td className="p-2 text-right">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleRemoveProducto(index)}
+                              disabled={isLoading}
+                              className="h-6 w-6 sm:h-8 sm:w-8"
+                            >
+                              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-red-500" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t">
+                      <td
+                        colSpan={3}
+                        className="p-2 text-right font-semibold text-xs sm:text-sm"
+                      >
+                        Subtotal:
+                      </td>
+                      <td className="p-2 text-right font-semibold text-xs sm:text-sm">
+                        {formatCurrency(subtotal)}
+                      </td>
+                      <td></td>
+                    </tr>
+                    <tr>
+                      <td
+                        colSpan={3}
+                        className="p-2 text-right font-semibold text-xs sm:text-sm"
+                      >
+                        Descuento ({descuento || "0"}%):
+                      </td>
+                      <td className="p-2 text-right font-semibold text-xs sm:text-sm">
+                        {formatCurrency(descuentoValor)}
+                      </td>
+                      <td></td>
+                    </tr>
+                    <tr className="border-t">
+                      <td
+                        colSpan={3}
+                        className="p-2 text-right font-semibold text-xs sm:text-sm"
+                      >
+                        Total Final:
+                      </td>
+                      <td className="p-2 text-right font-semibold text-base sm:text-lg text-cyan-600">
+                        {formatCurrency(total)}
+                      </td>
+                      <td></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
             </div>
-          </div>
 
-          <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={isLoading}
+                className="h-8 sm:h-10 text-xs sm:text-sm"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                className="bg-cyan-gradient h-8 sm:h-10 text-xs sm:text-sm"
+                disabled={isLoading || detalles.length === 0}
+              >
+                {isLoading
+                  ? "Guardando..."
+                  : aumentaStock
+                  ? "Guardar Nota de Crédito"
+                  : "Guardar Factura"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-cyan-gradient">
+              Confirmar {aumentaStock ? "Nota de Crédito" : "Factura"}
+            </DialogTitle>
+            <div className="pt-3 space-y-2 text-xs sm:text-sm">
+              <div className="space-y-2">
+                <div>
+                  Cliente:{" "}
+                  <span className="font-medium">
+                    {clienteSeleccionado?.nombre}
+                  </span>
+                </div>
+                <div>
+                  Tipo:{" "}
+                  <span className="font-medium">
+                    {tipoComprobante.replace(/_/g, " ")}
+                  </span>
+                </div>
+                <div>
+                  Total:{" "}
+                  <span className="font-medium text-cyan-600">
+                    {formatCurrency(total)}
+                  </span>
+                </div>
+                <div>
+                  Productos:{" "}
+                  <span className="font-medium">{detalles.length}</span>
+                </div>
+                {descuento && (
+                  <div>
+                    Descuento: <span className="font-medium">{descuento}%</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </DialogHeader>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-0 mt-4">
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={() => setIsConfirmDialogOpen(false)}
+              className="w-full sm:w-auto h-8 sm:h-10 text-xs sm:text-sm"
               disabled={isLoading}
             >
               Cancelar
             </Button>
             <Button
-              type="submit"
-              className="bg-cyan-gradient"
-              disabled={isLoading || detalles.length === 0}
+              type="button"
+              onClick={handleConfirmSubmit}
+              className="bg-cyan-gradient w-full sm:w-auto h-8 sm:h-10 text-xs sm:text-sm"
+              disabled={isLoading}
             >
-              {isLoading
-                ? "Guardando..."
-                : aumentaStock
-                ? "Guardar Nota de Crédito"
-                : "Guardar Factura"}
+              {isLoading ? "Guardando..." : "Confirmar"}
             </Button>
-          </div>
-        </form>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-        <ProductSearchDialog
-          open={isProductSearchOpen}
-          onOpenChange={setIsProductSearchOpen}
-          onProductSelect={handleProductSelect}
-          listaPrecio={listaPrecio}
-          productosAgregados={detalles.map((d) => d.productoId)}
-        />
+      <ProductSearchDialog
+        open={isProductSearchOpen}
+        onOpenChange={setIsProductSearchOpen}
+        onProductSelect={handleProductSelect}
+        listaPrecio={listaPrecio}
+        productosAgregados={detalles.map((d) => d.productoId)}
+      />
 
-        <ClienteSearchDialog
-          open={isClienteSearchOpen}
-          onOpenChange={setIsClienteSearchOpen}
-          onClienteSelect={handleClienteSelect}
-        />
-      </DialogContent>
-    </Dialog>
+      <ClienteSearchDialog
+        open={isClienteSearchOpen}
+        onOpenChange={setIsClienteSearchOpen}
+        onClienteSelect={handleClienteSelect}
+      />
+    </>
   );
 }

@@ -301,9 +301,10 @@ export function ProductSearchDialog({
                     currentProducts.map((producto) => (
                       <tr
                         key={producto.id}
-                        className={`border-b hover:bg-muted/50 transition-colors ${
+                        className={`border-b hover:bg-muted/50 transition-colors cursor-pointer ${
                           producto.stock <= 0 ? "bg-orange-50" : ""
                         }`}
+                        onClick={() => handleProductSelect(producto)}
                       >
                         <td className="py-1 sm:py-2 px-1 sm:px-2 text-xs sm:text-sm">
                           {producto.codigo}
@@ -325,11 +326,14 @@ export function ProductSearchDialog({
                         >
                           {producto.stock}
                         </td>
-                        <td className="py-1 sm:py-2 px-1 sm:px-2 text-right">
+                        <td className="py-1 sm:py-2 px-1 sm:px-2 text-right hidden sm:table-cell">
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleProductSelect(producto)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleProductSelect(producto);
+                            }}
                             className="bg-cyan-gradient text-white hover:text-white px-1 sm:px-3 py-0 h-7 text-xs sm:text-sm whitespace-nowrap"
                           >
                             Elegir

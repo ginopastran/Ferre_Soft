@@ -18,7 +18,7 @@ export default async function handler(
     return res.status(200).json(producto);
   }
 
-  if (req.method === "PUT") {
+  if (req.method === "PUT" || req.method === "PATCH") {
     try {
       const data = req.body;
       let imagenUrl = data.imagenUrl;
@@ -28,24 +28,30 @@ export default async function handler(
         imagenUrl = await uploadImage(data.imagenUrl);
       }
 
+      // Si es PATCH, solo actualizamos los campos proporcionados
+      const updateData =
+        req.method === "PATCH"
+          ? data
+          : {
+              codigo: data.codigo,
+              codigoProveedor: data.codigoProveedor,
+              codigoBarras: data.codigoBarras || null,
+              rubro: data.rubro,
+              descripcion: data.descripcion,
+              proveedor: data.proveedor,
+              precioCosto: Number(data.precioCosto),
+              iva: Number(data.iva),
+              margenGanancia1: Number(data.margenGanancia1),
+              precioFinal1: Number(data.precioFinal1),
+              margenGanancia2: Number(data.margenGanancia2),
+              precioFinal2: Number(data.precioFinal2),
+              imagenUrl,
+              stock: Number(data.stock),
+            };
+
       const producto = await prisma.producto.update({
         where: { id: Number(id) },
-        data: {
-          codigo: data.codigo,
-          codigoProveedor: data.codigoProveedor,
-          codigoBarras: data.codigoBarras || null,
-          rubro: data.rubro,
-          descripcion: data.descripcion,
-          proveedor: data.proveedor,
-          precioCosto: Number(data.precioCosto),
-          iva: Number(data.iva),
-          margenGanancia1: Number(data.margenGanancia1),
-          precioFinal1: Number(data.precioFinal1),
-          margenGanancia2: Number(data.margenGanancia2),
-          precioFinal2: Number(data.precioFinal2),
-          imagenUrl,
-          stock: Number(data.stock),
-        },
+        data: updateData,
       });
 
       return res.status(200).json(producto);
