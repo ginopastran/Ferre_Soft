@@ -150,14 +150,9 @@ export function ProductDialog({
     setIsLoading(true);
 
     try {
-      if (!formData.imagenUrl) {
-        toast.error("Por favor, seleccione una imagen para el producto");
-        setIsLoading(false);
-        return;
-      }
-
-      // Solo validamos el formato base64 si es una imagen nueva
+      // Solo validamos el formato base64 si hay una imagen
       if (
+        formData.imagenUrl &&
         formData.imagenUrl.startsWith("data:") &&
         !formData.imagenUrl.startsWith("data:image")
       ) {
@@ -469,7 +464,7 @@ export function ProductDialog({
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Imagen</label>
+            <label className="text-sm font-medium">Imagen (opcional)</label>
             <ImageUpload
               onImageSelect={(base64: string) =>
                 setFormData({ ...formData, imagenUrl: base64 })
