@@ -28,6 +28,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useUrlParams } from "@/hooks/useUrlParams";
@@ -165,7 +166,28 @@ function ProductosContent() {
       if (!response.ok) throw new Error("Error al crear producto");
 
       const productoCreado = await response.json();
-      setProductsList([productoCreado, ...productsList]);
+
+      // Transformar el producto creado para mantener consistencia con la lista
+      const productoTransformado: Product = {
+        id: productoCreado.id,
+        codigo: productoCreado.codigo || "",
+        codigoProveedor: productoCreado.codigoProveedor || "",
+        codigoBarras: productoCreado.codigoBarras || null,
+        rubro: productoCreado.rubro || "",
+        descripcion: productoCreado.descripcion || "",
+        proveedor: productoCreado.proveedor || "",
+        precioCosto: productoCreado.precioCosto || 0,
+        iva: productoCreado.iva || 21,
+        margenGanancia1: productoCreado.margenGanancia1 || 0,
+        precioFinal1: productoCreado.precioFinal1 || 0,
+        margenGanancia2: productoCreado.margenGanancia2 || 0,
+        precioFinal2: productoCreado.precioFinal2 || 0,
+        imagenUrl: productoCreado.imagenUrl || "",
+        stock: productoCreado.stock || 0,
+        creadoEn: new Date(productoCreado.creadoEn),
+      };
+
+      setProductsList([productoTransformado, ...productsList]);
       toast.success("Producto creado exitosamente");
       setIsDialogOpen(false);
     } catch (error) {
@@ -199,11 +221,13 @@ function ProductosContent() {
       let aValue = a[sortField as keyof Product];
       let bValue = b[sortField as keyof Product];
 
-      // Manejar fechas
-      if (aValue instanceof Date) {
-        return sortOrder === "asc"
-          ? aValue.getTime() - (bValue as Date).getTime()
-          : (bValue as Date).getTime() - aValue.getTime();
+      // Manejar fechas con validación adicional
+      if (aValue instanceof Date && bValue instanceof Date) {
+        // Verificar que las fechas sean válidas
+        const aTime = !isNaN(aValue.getTime()) ? aValue.getTime() : 0;
+        const bTime = !isNaN(bValue.getTime()) ? bValue.getTime() : 0;
+
+        return sortOrder === "asc" ? aTime - bTime : bTime - aTime;
       }
 
       // Convertir a string o número para comparación
@@ -437,6 +461,10 @@ function ProductosContent() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Eliminar Producto</DialogTitle>
+            <DialogDescription>
+              Esta acción no se puede deshacer. El producto se eliminará
+              permanentemente.
+            </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <p>¿Estás seguro de que deseas eliminar este producto?</p>

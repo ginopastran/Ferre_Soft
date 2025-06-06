@@ -20,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import Image from "next/image";
 
@@ -195,6 +196,9 @@ function StockContent() {
             <DialogTitle>
               {adjustmentType === "add" ? "Agregar" : "Restar"} Stock
             </DialogTitle>
+            <DialogDescription>
+              Modifica la cantidad de stock del producto seleccionado.
+            </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <p className="mb-4">

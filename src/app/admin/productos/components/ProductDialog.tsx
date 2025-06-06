@@ -4,6 +4,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -214,10 +215,10 @@ export function ProductDialog({
           <DialogTitle className="text-2xl font-bold text-cyan-gradient">
             {mode === "create" ? "Nuevo Producto" : "Editar Producto"}
           </DialogTitle>
-          <p className="text-sm text-muted-foreground mt-2">
+          <DialogDescription>
             Los precios finales se calculan ahora sin IVA. El porcentaje de IVA
             es informativo y se aplicará automáticamente durante la facturación.
-          </p>
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">

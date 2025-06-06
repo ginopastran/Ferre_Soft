@@ -4,6 +4,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
@@ -29,6 +30,10 @@ export const SortDialog: React.FC<SortDialogProps> = ({
           <DialogTitle className="text-cyan-gradient font-bold text-2xl">
             Ordenar Productos
           </DialogTitle>
+          <DialogDescription>
+            Selecciona el criterio por el cual deseas ordenar la lista de
+            productos.
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
