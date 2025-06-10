@@ -445,15 +445,15 @@ export default async function handler(
               body {
                 margin: 0;
                 padding: 1cm;
-              }
+            }
               .remito-container {
                 page-break-after: avoid;
-              }
+            }
             }
           </style>
         </head>
         <body>
-          ${html}
+            ${html}
         </body>
       </html>
     `;
