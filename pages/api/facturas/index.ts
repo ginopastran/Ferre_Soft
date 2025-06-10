@@ -288,6 +288,9 @@ export default async function handler(
         const situacionesValidasParaFacturaA = [
           "RESPONSABLE_INSCRIPTO",
           "IVA Responsable Inscripto",
+          "MONOTRIBUTISTA",
+          "Monotributista",
+          "Responsable Monotributo",
         ];
         if (!situacionesValidasParaFacturaA.includes(cliente.situacionIVA)) {
           console.log("Situación IVA inválida:", {
@@ -297,7 +300,7 @@ export default async function handler(
           return res.status(400).json({
             error: "Situación IVA inválida",
             details:
-              "Para Factura A, el cliente debe ser Responsable Inscripto. " +
+              "Para Factura A, el cliente debe ser Responsable Inscripto o Monotributista. " +
               `La situación actual del cliente es "${cliente.situacionIVA}"`,
             situacionIVA: cliente.situacionIVA,
             situacionesValidas: situacionesValidasParaFacturaA,

@@ -196,13 +196,16 @@ async function generatePdfWithJSPDF(
         const pdfBuffer = await page.pdf({
           format: "a4",
           printBackground: true,
-          preferCSSPageSize: true,
+          preferCSSPageSize: false,
+          displayHeaderFooter: false,
           margin: {
-            top: "0mm",
-            right: "0mm",
-            bottom: "0mm",
-            left: "0mm",
+            top: "15mm",
+            right: "15mm",
+            bottom: "15mm",
+            left: "15mm",
           },
+          scale: 0.8,
+          omitBackground: false,
         });
 
         console.log("[PDF] PDF generado correctamente con Puppeteer");
@@ -264,6 +267,11 @@ export default async function handler(
       },
       include: {
         cliente: true,
+        vendedor: {
+          select: {
+            nombre: true,
+          },
+        },
         detalles: {
           include: {
             producto: true,
@@ -281,20 +289,33 @@ export default async function handler(
     // Formatear fecha
     const fechaEmision = new Date(remito.fecha).toLocaleDateString();
 
+    // Función para formatear moneda
+    const formatCurrency = (amount: number) => {
+      return new Intl.NumberFormat("es-AR", {
+        style: "currency",
+        currency: "ARS",
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(amount);
+    };
+
     // Preparar los datos para el componente
     const remitoData = {
       numero: remito.numero,
       fecha: fechaEmision,
       razonSocial: "ANDES FUEGUINO S.A.S.",
-      // domicilioComercial: "Av. Siempre Viva 123 - CABA",
       clienteNombre: remito.cliente.nombre,
       clienteCuit: remito.cliente.cuitDni || "No especificado",
       clienteDomicilio: remito.cliente.direccion || "No especificado",
+      vendedor: remito.vendedor?.nombre || undefined,
       detalles: remito.detalles.map((detalle) => ({
         codigo: detalle.producto.codigo || "",
         descripcion: detalle.producto.descripcion || "",
         cantidad: detalle.cantidad.toString(),
+        precioUnitario: formatCurrency(detalle.precioUnitario),
+        subtotal: formatCurrency(detalle.subtotal),
       })),
+      total: formatCurrency(remito.total),
     };
 
     console.log(`[PDF] Datos preparados, renderizando componente React`);
@@ -314,108 +335,125 @@ export default async function handler(
             * {
               box-sizing: border-box;
               font-family: Arial, sans-serif;
+              margin: 0;
+              padding: 0;
             }
             body {
               width: 21cm;
               min-height: 29.7cm;
               font-size: 13px;
               margin: 0;
-              padding: 0;
-            }
-            .page {
-              width: 21cm;
-              min-height: 29.7cm;
               padding: 1.5cm;
-              margin: 0;
               background: white;
             }
-            .wrapper {
-              border: 1px solid #000;
-              padding: 8px;
-              margin-bottom: 2px;
-              box-sizing: border-box;
+            .remito-container {
+              width: 100%;
+              max-width: 100%;
+              page-break-after: avoid;
             }
-            .flex {
+            .header {
+              text-align: center;
+              margin-bottom: 20px;
+              padding-bottom: 15px;
+              border-bottom: 2px solid #3498db;
+            }
+            .header h1 {
+              color: #3498db;
+              margin-bottom: 5px;
+              font-size: 28px;
+            }
+            .header h2 {
+              margin: 5px 0;
+              font-size: 18px;
+            }
+            .header h3 {
+              margin: 10px 0 5px 0;
+              font-size: 16px;
+            }
+            .info-container {
               display: flex;
-              flex-wrap: wrap;
-            }
-            .space-between {
               justify-content: space-between;
+              margin: 20px 0;
+              gap: 20px;
             }
-            .space-around {
-              justify-content: space-around;
+            .info-section {
+              flex: 1;
+              padding: 15px;
+              border: 1px solid #ddd;
+              border-radius: 5px;
+            }
+            .info-section h3 {
+              color: #3498db;
+              margin-bottom: 10px;
+              font-size: 16px;
+            }
+            .info-section p {
+              margin: 5px 0;
+              line-height: 1.4;
+            }
+            .detalles-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 20px 0;
+              font-size: 12px;
+            }
+            .detalles-table th {
+              background-color: #3498db;
+              color: white;
+              padding: 10px 8px;
+              text-align: left;
+              font-weight: bold;
+            }
+            .detalles-table td {
+              padding: 8px;
+              border-bottom: 1px solid #ddd;
+            }
+            .detalles-table tr:nth-child(even) {
+              background-color: #f8f9fa;
             }
             .text-center {
               text-align: center;
             }
-            .text-left {
-              text-align: left;
-            }
             .text-right {
               text-align: right;
             }
-            .bold {
-              font-weight: bold;
+            .total-section {
+              margin: 20px 0;
+              padding: 15px;
+              background-color: #f8f9fa;
+              border: 2px solid #3498db;
+              border-radius: 5px;
             }
-            .italic {
+            .footer {
+              text-align: center;
+              margin-top: 30px;
+              padding-top: 20px;
+              border-top: 1px solid #ddd;
               font-style: italic;
+              color: #666;
             }
-            .text-20 {
-              font-size: 20px;
+            .footer p {
+              margin: 5px 0;
             }
             .no-margin {
               margin: 0;
             }
-            .inline-block {
-              display: inline-block;
-              vertical-align: top;
+            .bold {
+              font-weight: bold;
             }
-            .w50 {
-              width: 50%;
+            @media print {
+              body {
+                margin: 0;
+                padding: 1cm;
+              }
+              .remito-container {
+                page-break-after: avoid;
+              }
             }
-            .relative {
-              position: relative;
-            }
-            .floating-mid {
-              position: absolute;
-              left: 50%;
-              top: -25px;
-              background: white;
-              border: 1px solid black;
-              padding: 4px 12px;
-              transform: translateX(-50%);
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              font-size: 11px;
-            }
-            table, th, td {
-              border: 1px solid #000;
-            }
-            th, td {
-              padding: 4px;
-            }
-            .small {
-              font-size: 9px;
-            }
-            .footer {
-              page-break-inside: avoid;
-              margin-top: 15px;
-            }
-            .compact-table tr td, .compact-table tr th {
-              padding: 3px;
-            }
-            .no-page-break {
-              page-break-inside: avoid;
-            }
-            ${getStyles()}
           </style>
         </head>
         <body>
-          <div class="page">
-            ${html}
-          </div>
+          ${html}
         </body>
       </html>
     `;
@@ -426,13 +464,16 @@ export default async function handler(
     const options = {
       format: "A4",
       printBackground: true,
+      displayHeaderFooter: false,
+      preferCSSPageSize: false,
       margin: {
-        top: "20px",
-        right: "20px",
-        bottom: "20px",
-        left: "20px",
+        top: "15mm",
+        right: "15mm",
+        bottom: "15mm",
+        left: "15mm",
       },
       timeout: TIMEOUT_MS,
+      scale: 0.8,
     };
 
     // Crear una promesa para la generación del PDF

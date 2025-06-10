@@ -4,6 +4,8 @@ interface DetalleRemito {
   codigo: string;
   descripcion: string;
   cantidad: string;
+  precioUnitario: string;
+  subtotal: string;
 }
 
 interface RemitoTemplateProps {
@@ -14,7 +16,9 @@ interface RemitoTemplateProps {
   clienteNombre: string;
   clienteCuit: string;
   clienteDomicilio: string;
+  vendedor?: string;
   detalles: DetalleRemito[];
+  total: string;
 }
 
 export const RemitoTemplate: React.FC<RemitoTemplateProps> = ({
@@ -25,7 +29,9 @@ export const RemitoTemplate: React.FC<RemitoTemplateProps> = ({
   clienteNombre,
   clienteCuit,
   clienteDomicilio,
+  vendedor,
   detalles,
+  total,
 }) => {
   return (
     <div className="remito-container">
@@ -46,6 +52,11 @@ export const RemitoTemplate: React.FC<RemitoTemplateProps> = ({
           {/* <p>
             <strong>Domicilio:</strong> {domicilioComercial}
           </p> */}
+          {vendedor && (
+            <p>
+              <strong>Vendedor:</strong> {vendedor}
+            </p>
+          )}
         </div>
 
         <div className="info-section">
@@ -68,6 +79,8 @@ export const RemitoTemplate: React.FC<RemitoTemplateProps> = ({
             <th>Código</th>
             <th>Descripción</th>
             <th>Cantidad</th>
+            <th>Precio Unit.</th>
+            <th>Subtotal</th>
           </tr>
         </thead>
         <tbody>
@@ -75,11 +88,26 @@ export const RemitoTemplate: React.FC<RemitoTemplateProps> = ({
             <tr key={index}>
               <td>{detalle.codigo}</td>
               <td>{detalle.descripcion}</td>
-              <td>{detalle.cantidad}</td>
+              <td className="text-center">{detalle.cantidad}</td>
+              <td className="text-right">{detalle.precioUnitario}</td>
+              <td className="text-right">{detalle.subtotal}</td>
             </tr>
           ))}
         </tbody>
       </table>
+
+      <div className="total-section">
+        <div
+          style={{
+            textAlign: "right",
+            marginTop: "20px",
+            fontSize: "16px",
+            fontWeight: "bold",
+          }}
+        >
+          <p>Total: {total}</p>
+        </div>
+      </div>
 
       <div className="footer text-center">
         <p>Este documento es un comprobante de entrega de mercadería.</p>
