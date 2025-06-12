@@ -45,6 +45,29 @@ interface Stats {
   porcentajeMargen: number;
 }
 
+interface Factura {
+  id: number;
+  total: number;
+  clienteId: number;
+  detalles?: Array<{
+    cantidad: number;
+    subtotal: number;
+    producto: {
+      precioCosto: number;
+    };
+  }>;
+}
+
+interface FacturasResponse {
+  facturas: Factura[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
 function ReporteContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -214,10 +237,11 @@ function ReporteContent() {
           end: currentRange.end.toISOString(),
         });
 
+        // Agregar includeDetails=true para obtener los detalles
         const response = await fetch(
           `/api/facturas?userId=${userData.id}&role=${
             userData.rol.nombre
-          }&startDate=${currentRange.start.toISOString()}&endDate=${currentRange.end.toISOString()}`
+          }&startDate=${currentRange.start.toISOString()}&endDate=${currentRange.end.toISOString()}&includeDetails=true`
         );
 
         if (!response.ok) {
@@ -226,7 +250,8 @@ function ReporteContent() {
           throw new Error("Error al obtener estadísticas");
         }
 
-        const facturas = await response.json();
+        const data: FacturasResponse = await response.json();
+        const facturas = data.facturas || [];
         console.log("Facturas recibidas:", facturas.length);
 
         // Calcular estadísticas del período actual
@@ -234,15 +259,18 @@ function ReporteContent() {
         let totalClientes = new Set();
         let margenGanancia = 0;
 
-        facturas.forEach((factura: any) => {
+        facturas.forEach((factura: Factura) => {
           totalVentas += factura.total;
           totalClientes.add(factura.clienteId);
 
           // Calcular margen de ganancia
-          factura.detalles?.forEach((detalle: any) => {
-            const costoTotal = detalle.producto.precioCosto * detalle.cantidad;
-            margenGanancia += detalle.subtotal - costoTotal;
-          });
+          if (factura.detalles) {
+            factura.detalles.forEach((detalle) => {
+              const costoTotal =
+                detalle.producto.precioCosto * detalle.cantidad;
+              margenGanancia += detalle.subtotal - costoTotal;
+            });
+          }
         });
 
         // Obtener estadísticas del período anterior para comparación
@@ -250,29 +278,33 @@ function ReporteContent() {
         const previousResponse = await fetch(
           `/api/facturas?userId=${userData.id}&role=${
             userData.rol.nombre
-          }&startDate=${previousRange.start.toISOString()}&endDate=${previousRange.end.toISOString()}`
+          }&startDate=${previousRange.start.toISOString()}&endDate=${previousRange.end.toISOString()}&includeDetails=true`
         );
 
         if (!previousResponse.ok) {
           throw new Error("Error al obtener estadísticas anteriores");
         }
 
-        const facturasAnteriores = await previousResponse.json();
+        const previousData: FacturasResponse = await previousResponse.json();
+        const facturasAnteriores = previousData.facturas || [];
 
         // Calcular estadísticas del período anterior
         let ventasAnteriores = 0;
         let clientesAnteriores = new Set();
         let margenAnterior = 0;
 
-        facturasAnteriores.forEach((factura: any) => {
+        facturasAnteriores.forEach((factura: Factura) => {
           ventasAnteriores += factura.total;
           clientesAnteriores.add(factura.clienteId);
 
           // Calcular margen de ganancia anterior
-          factura.detalles?.forEach((detalle: any) => {
-            const costoTotal = detalle.producto.precioCosto * detalle.cantidad;
-            margenAnterior += detalle.subtotal - costoTotal;
-          });
+          if (factura.detalles) {
+            factura.detalles.forEach((detalle) => {
+              const costoTotal =
+                detalle.producto.precioCosto * detalle.cantidad;
+              margenAnterior += detalle.subtotal - costoTotal;
+            });
+          }
         });
 
         // Calcular porcentajes de cambio

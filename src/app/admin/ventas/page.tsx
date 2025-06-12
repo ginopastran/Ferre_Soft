@@ -43,6 +43,18 @@ interface Factura {
   };
 }
 
+interface FacturasResponse {
+  facturas: Factura[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+}
+
 function VentasContent() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -87,6 +99,13 @@ function VentasContent() {
 
   // Update filtered facturas when search term, filter status, or facturas change
   useEffect(() => {
+    // Asegurar que facturas es un array válido antes de filtrar
+    if (!Array.isArray(facturas)) {
+      console.warn("facturas no es un array:", facturas);
+      setFilteredFacturas([]);
+      return;
+    }
+
     let results = facturas;
 
     // Apply status filter
@@ -117,11 +136,28 @@ function VentasContent() {
         `/api/facturas?userId=${user?.id}&role=${user?.rol?.nombre}`
       );
       if (!response.ok) throw new Error("Error al cargar facturas");
-      const data = await response.json();
-      setFacturas(data);
-      setFilteredFacturas(data);
+      const data: FacturasResponse | Factura[] = await response.json();
+
+      // Manejar tanto la respuesta paginada como el formato legacy
+      if (Array.isArray(data)) {
+        // Formato legacy - array directo
+        setFacturas(data);
+        setFilteredFacturas(data);
+      } else if (data && typeof data === "object" && "facturas" in data) {
+        // Formato paginado - extraer el array de facturas
+        const facturasArray = data.facturas || [];
+        setFacturas(facturasArray);
+        setFilteredFacturas(facturasArray);
+      } else {
+        console.error("Formato de respuesta inesperado:", data);
+        setFacturas([]);
+        setFilteredFacturas([]);
+      }
     } catch (error) {
+      console.error("Error al cargar facturas:", error);
       toast.error("Error al cargar las facturas");
+      setFacturas([]);
+      setFilteredFacturas([]);
     } finally {
       setLoading(false);
     }

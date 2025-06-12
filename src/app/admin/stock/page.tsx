@@ -24,6 +24,18 @@ import {
 } from "@/components/ui/dialog";
 import Image from "next/image";
 
+interface ProductsResponse {
+  productos: Product[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+}
+
 function StockContent() {
   const [searchTerm, setSearchTerm] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
@@ -43,11 +55,26 @@ function StockContent() {
     setLoading(true);
     try {
       const response = await fetch("/api/productos");
-      const data = await response.json();
-      setProducts(data);
+      if (!response.ok) throw new Error("Error al cargar productos");
+
+      const data: ProductsResponse | Product[] = await response.json();
+
+      // Manejar tanto la respuesta paginada como el formato legacy
+      if (Array.isArray(data)) {
+        // Formato legacy - array directo
+        setProducts(data);
+      } else if (data && typeof data === "object" && "productos" in data) {
+        // Formato paginado - extraer el array de productos
+        const productosArray = data.productos || [];
+        setProducts(productosArray);
+      } else {
+        console.error("Formato de respuesta inesperado:", data);
+        setProducts([]);
+      }
     } catch (error) {
       console.error("Error al cargar productos:", error);
       toast.error("Error al cargar los productos");
+      setProducts([]);
     } finally {
       setLoading(false);
     }
@@ -86,11 +113,21 @@ function StockContent() {
     }
   };
 
-  const filteredProducts = products.filter(
-    (product) =>
-      product.descripcion.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.codigo.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Asegurar que products es un array válido antes de filtrar
+  const filteredProducts = Array.isArray(products)
+    ? products.filter(
+        (product) =>
+          product.descripcion
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          product.codigo.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : [];
+
+  // Validación adicional para debugging
+  if (!Array.isArray(products)) {
+    console.warn("products no es un array:", products);
+  }
 
   return (
     <>

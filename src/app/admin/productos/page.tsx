@@ -17,6 +17,8 @@ import {
   Search,
   Share,
   Link,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -45,6 +47,18 @@ import { ProductDialog, ProductForm } from "./components/ProductDialog";
 import { RubroListDialog } from "./components/RubroListDialog";
 import { ProveedorDialog } from "./components/ProveedorDialog";
 
+interface ProductsResponse {
+  productos: Product[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+}
+
 function ProductosContent() {
   const { setUrlParam, getUrlParam } = useUrlParams();
   const searchParams = useSearchParams();
@@ -72,6 +86,14 @@ function ProductosContent() {
   const [isRubroDialogOpen, setIsRubroDialogOpen] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    pages: 0,
+    hasNext: false,
+    hasPrev: false,
+  });
   const productsPerPage = 20;
 
   useEffect(() => {
@@ -85,6 +107,7 @@ function ProductosContent() {
     const urlRubro = getUrlParam("rubro");
     const urlProveedor = getUrlParam("proveedor");
     const urlSearch = getUrlParam("search");
+    const urlPage = getUrlParam("page");
 
     if (urlSort) {
       setSortField(urlSort);
@@ -116,44 +139,112 @@ function ProductosContent() {
       setSearchTerm("");
     }
 
-    setCurrentPage(1);
+    if (urlPage) {
+      setCurrentPage(parseInt(urlPage, 10));
+    } else {
+      setCurrentPage(1);
+    }
   }, [searchParams, getUrlParam]);
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    setUrlParam("page", newPage === 1 ? null : newPage.toString());
+  };
 
   useEffect(() => {
     const fetchProductos = async () => {
       setLoading(true);
       try {
-        const response = await fetch("/api/productos");
-        const data = await response.json();
-        console.log("Products from API:", data);
-        const transformedProducts: Product[] = data.map((p: any) => ({
-          id: p.id,
-          codigo: p.codigo || "",
-          codigoProveedor: p.codigoProveedor || "",
-          codigoBarras: p.codigoBarras || null,
-          rubro: p.rubro || "",
-          descripcion: p.descripcion || "",
-          proveedor: p.proveedor || "",
-          precioCosto: p.precioCosto || 0,
-          iva: p.iva || 21,
-          margenGanancia1: p.margenGanancia1 || 0,
-          precioFinal1: p.precioFinal1 || 0,
-          margenGanancia2: p.margenGanancia2 || 0,
-          precioFinal2: p.precioFinal2 || 0,
-          imagenUrl: p.imagenUrl || "",
-          stock: p.stock || 0,
-          creadoEn: new Date(p.creadoEn),
-        }));
+        // Construir parámetros de búsqueda
+        const params = new URLSearchParams({
+          page: currentPage.toString(),
+          limit: productsPerPage.toString(),
+        });
 
-        setProductsList(transformedProducts);
+        if (searchTerm) params.append("search", searchTerm);
+        if (filterRubro !== "all") params.append("rubro", filterRubro);
+        if (filterProveedor !== "all")
+          params.append("proveedor", filterProveedor);
+        if (sortField) params.append("sort", sortField);
+        if (sortOrder) params.append("order", sortOrder);
+
+        const response = await fetch(`/api/productos?${params.toString()}`);
+        const data: ProductsResponse = await response.json();
+
+        console.log("Products from API:", data);
+
+        // La API devuelve productos paginados
+        if (data.productos && data.pagination) {
+          const transformedProducts: Product[] = data.productos.map(
+            (p: any) => ({
+              id: p.id,
+              codigo: p.codigo || "",
+              codigoProveedor: p.codigoProveedor || "",
+              codigoBarras: p.codigoBarras || null,
+              rubro: p.rubro || "",
+              descripcion: p.descripcion || "",
+              proveedor: p.proveedor || "",
+              precioCosto: p.precioCosto || 0,
+              iva: p.iva || 21,
+              margenGanancia1: p.margenGanancia1 || 0,
+              precioFinal1: p.precioFinal1 || 0,
+              margenGanancia2: p.margenGanancia2 || 0,
+              precioFinal2: p.precioFinal2 || 0,
+              imagenUrl: p.imagenUrl || "",
+              stock: p.stock || 0,
+              creadoEn: new Date(p.creadoEn),
+            })
+          );
+          setProductsList(transformedProducts);
+          setPagination(data.pagination);
+        } else {
+          // Fallback para API que devuelve todos los productos
+          const transformedProducts: Product[] = (data as unknown as any[]).map(
+            (p: any) => ({
+              id: p.id,
+              codigo: p.codigo || "",
+              codigoProveedor: p.codigoProveedor || "",
+              codigoBarras: p.codigoBarras || null,
+              rubro: p.rubro || "",
+              descripcion: p.descripcion || "",
+              proveedor: p.proveedor || "",
+              precioCosto: p.precioCosto || 0,
+              iva: p.iva || 21,
+              margenGanancia1: p.margenGanancia1 || 0,
+              precioFinal1: p.precioFinal1 || 0,
+              margenGanancia2: p.margenGanancia2 || 0,
+              precioFinal2: p.precioFinal2 || 0,
+              imagenUrl: p.imagenUrl || "",
+              stock: p.stock || 0,
+              creadoEn: new Date(p.creadoEn),
+            })
+          );
+          setProductsList(transformedProducts);
+          setPagination({
+            page: 1,
+            limit: transformedProducts.length,
+            total: transformedProducts.length,
+            pages: 1,
+            hasNext: false,
+            hasPrev: false,
+          });
+        }
       } catch (error) {
         console.error("Error al cargar productos:", error);
+        toast.error("Error al cargar productos");
       } finally {
         setLoading(false);
       }
     };
     fetchProductos();
-  }, []);
+  }, [
+    currentPage,
+    searchTerm,
+    filterRubro,
+    filterProveedor,
+    sortField,
+    sortOrder,
+  ]);
 
   const handleAddProduct = async (data: ProductForm) => {
     try {
@@ -187,9 +278,12 @@ function ProductosContent() {
         creadoEn: new Date(productoCreado.creadoEn),
       };
 
-      setProductsList([productoTransformado, ...productsList]);
+      // Recargar la lista para mantener consistencia con la paginación
       toast.success("Producto creado exitosamente");
       setIsDialogOpen(false);
+
+      // Recargar datos para mantener paginación correcta
+      window.location.reload();
     } catch (error) {
       console.error("Error:", error);
       toast.error("Error al crear el producto");
@@ -210,74 +304,20 @@ function ProductosContent() {
       toast.success("Producto eliminado exitosamente");
       setDeleteDialogOpen(false);
       setProductToDelete(null);
+
+      // Recargar datos para mantener paginación correcta
+      window.location.reload();
     } catch (error) {
       console.error("Error:", error);
       toast.error("Error al eliminar el producto");
     }
   };
 
-  const sortProducts = (products: Product[]) => {
-    return [...products].sort((a, b) => {
-      let aValue = a[sortField as keyof Product];
-      let bValue = b[sortField as keyof Product];
-
-      // Manejar fechas con validación adicional
-      if (aValue instanceof Date && bValue instanceof Date) {
-        // Verificar que las fechas sean válidas
-        const aTime = !isNaN(aValue.getTime()) ? aValue.getTime() : 0;
-        const bTime = !isNaN(bValue.getTime()) ? bValue.getTime() : 0;
-
-        return sortOrder === "asc" ? aTime - bTime : bTime - aTime;
-      }
-
-      // Convertir a string o número para comparación
-      aValue = (aValue as string | number) || "";
-      bValue = (bValue as string | number) || "";
-
-      if (typeof aValue === "string") {
-        aValue = aValue.toLowerCase();
-        bValue = (bValue as string).toLowerCase();
-      }
-
-      if (sortField === "precioCosto") {
-        aValue = Number(aValue) || 0;
-        bValue = Number(bValue) || 0;
-      }
-
-      const comparison = aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
-      return sortOrder === "asc" ? comparison : -comparison;
-    });
-  };
-
-  const filterProducts = (products: Product[]) => {
-    return products.filter((product) => {
-      const searchableFields = {
-        descripcion: product.descripcion.toLowerCase(),
-        codigo: product.codigo.toLowerCase(),
-        codigoProveedor: product.codigoProveedor.toLowerCase(),
-        codigoBarras: (product.codigoBarras || "").toLowerCase(),
-      };
-
-      const matchesSearch =
-        !searchTerm ||
-        Object.values(searchableFields).some((value) =>
-          value.includes(searchTerm.toLowerCase())
-        );
-
-      const matchesRubro =
-        filterRubro === "all" || product.rubro === filterRubro;
-
-      const matchesProveedor =
-        filterProveedor === "all" || product.proveedor === filterProveedor;
-
-      return matchesSearch && matchesRubro && matchesProveedor;
-    });
-  };
-
   const handleSearch = (value: string) => {
     setSearchTerm(value);
     setUrlParam("search", value || null);
     setCurrentPage(1);
+    setUrlParam("page", null); // Reset page when searching
   };
 
   const handleSort = (field: string) => {
@@ -295,6 +335,7 @@ function ProductosContent() {
     router.push(newUrl);
 
     setCurrentPage(1);
+    setUrlParam("page", null); // Reset page when sorting
   };
 
   const handleClearFilters = () => {
@@ -307,15 +348,6 @@ function ProductosContent() {
     setCurrentPage(1);
     router.push(pathname || "/");
   };
-
-  const sortedAndFiltered = sortProducts(filterProducts(productsList));
-
-  const indexOfLastProduct = currentPage * productsPerPage;
-  const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
-  const currentProducts = sortedAndFiltered.slice(
-    indexOfFirstProduct,
-    indexOfLastProduct
-  );
 
   return (
     <>
@@ -355,9 +387,21 @@ function ProductosContent() {
 
       <div className="h-full flex-1 flex-col space-y-4 md:space-y-8 p-4 md:p-8 flex max-w-[100vw]">
         <div className="space-y-4 w-full">
-          <p className="text-muted-foreground">
-            {productsList.length} productos
-          </p>
+          <div className="flex justify-between items-center">
+            <p className="text-muted-foreground">
+              {pagination.total} productos total
+              {pagination.total > 0 && (
+                <span className="ml-2">
+                  (Mostrando {(pagination.page - 1) * pagination.limit + 1} a{" "}
+                  {Math.min(
+                    pagination.page * pagination.limit,
+                    pagination.total
+                  )}
+                  )
+                </span>
+              )}
+            </p>
+          </div>
 
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex md:flex-row flex-col w-full items-center gap-2">
@@ -434,8 +478,16 @@ function ProductosContent() {
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {loading ? (
                 <ProductsGridSkeleton />
+              ) : productsList.length === 0 ? (
+                <div className="col-span-full text-center py-8">
+                  <p className="text-muted-foreground">
+                    {searchTerm
+                      ? "No se encontraron productos con ese criterio"
+                      : "No hay productos registrados"}
+                  </p>
+                </div>
               ) : (
-                currentProducts.map((product) => (
+                productsList.map((product) => (
                   <ProductCard
                     key={product.id}
                     product={product}
@@ -448,6 +500,108 @@ function ProductosContent() {
             </div>
           </div>
         </div>
+
+        {/* Paginación */}
+        {pagination.pages > 1 && (
+          <div className="flex items-center justify-center space-x-1 mt-8">
+            {/* Botón flecha izquierda (anterior) */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(pagination.page - 1)}
+              disabled={!pagination.hasPrev}
+              className="px-2"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+
+            {/* Primera página (siempre visible si no es la página 1) */}
+            {pagination.page > 1 && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(1)}
+                  className="px-3"
+                >
+                  1
+                </Button>
+                {pagination.page > 3 && (
+                  <span className="px-2 text-muted-foreground">...</span>
+                )}
+              </>
+            )}
+
+            {/* Páginas alrededor de la actual */}
+            <div className="flex items-center space-x-1">
+              {Array.from({ length: Math.min(3, pagination.pages) }, (_, i) => {
+                let pageNum;
+                if (pagination.pages <= 3) {
+                  pageNum = i + 1;
+                } else if (pagination.page === 1) {
+                  pageNum = i + 1;
+                } else if (pagination.page === pagination.pages) {
+                  pageNum = pagination.pages - 2 + i;
+                } else {
+                  pageNum = pagination.page - 1 + i;
+                }
+
+                // No mostrar si es la primera página (ya se muestra arriba)
+                if (pageNum === 1 && pagination.page > 1) return null;
+                // No mostrar si es la última página (se muestra abajo)
+                if (
+                  pageNum === pagination.pages &&
+                  pagination.page < pagination.pages
+                )
+                  return null;
+
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={
+                      pageNum === pagination.page ? "default" : "outline"
+                    }
+                    size="sm"
+                    onClick={() => handlePageChange(pageNum)}
+                    className={`px-3 ${
+                      pageNum === pagination.page ? "bg-cyan-gradient" : ""
+                    }`}
+                  >
+                    {pageNum}
+                  </Button>
+                );
+              })}
+            </div>
+
+            {/* Última página (siempre visible si no es la página actual) */}
+            {pagination.page < pagination.pages && (
+              <>
+                {pagination.page < pagination.pages - 2 && (
+                  <span className="px-2 text-muted-foreground">...</span>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(pagination.pages)}
+                  className="px-3"
+                >
+                  {pagination.pages}
+                </Button>
+              </>
+            )}
+
+            {/* Botón flecha derecha (siguiente) */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(pagination.page + 1)}
+              disabled={!pagination.hasNext}
+              className="px-2"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
 
       <ProductDialog
@@ -508,6 +662,7 @@ function ProductosContent() {
             setUrlParam("proveedor", value === "all" ? null : value);
           }
           setCurrentPage(1);
+          setUrlParam("page", null); // Reset page when filtering
         }}
       />
 

@@ -21,6 +21,8 @@ model Sucursal {
   usuarios   Usuario[]
   ordenes    OrdenCompra[]
   CierreCaja CierreCaja[]
+
+  @@index([nombre])
 }
 
 model Rol {
@@ -46,6 +48,10 @@ model Usuario {
   CierreCaja     CierreCaja[]
   Factura        Factura[]
   pagosRecibidos PagoVendedor[]
+
+  @@index([email])
+  @@index([rolId])
+  @@index([sucursalId])
 }
 
 model Producto {
@@ -76,6 +82,9 @@ model Producto {
   @@index([codigoBarras])
   @@index([rubro])
   @@index([rubroId])
+  @@index([proveedor])
+  @@index([descripcion])
+  @@index([creadoEn])
 }
 
 model OrdenCompra {
@@ -89,6 +98,11 @@ model OrdenCompra {
   sucursal   Sucursal       @relation(fields: [sucursalId], references: [id])
   vendedor   Usuario?       @relation(fields: [vendedorId], references: [id])
   detalles   DetalleOrden[]
+
+  @@index([sucursalId])
+  @@index([vendedorId])
+  @@index([fecha])
+  @@index([estado])
 }
 
 model DetalleOrden {
@@ -101,6 +115,9 @@ model DetalleOrden {
   subtotal        Float
   costo           Float
   precioHistorico Float
+
+  @@index([ordenId])
+  @@index([productoId])
 }
 
 model Chat {
@@ -169,6 +186,10 @@ model CierreCaja {
   ventasPorMetodo Json?
   vendedor        Usuario  @relation(fields: [vendedorId], references: [id])
   sucursal        Sucursal @relation(fields: [sucursalId], references: [id])
+
+  @@index([vendedorId])
+  @@index([sucursalId])
+  @@index([fechaCierre])
 }
 
 model TicketPendiente {
@@ -176,6 +197,9 @@ model TicketPendiente {
   orderData Json
   estado    String   @default("PENDIENTE")
   createdAt DateTime @default(now())
+
+  @@index([estado])
+  @@index([createdAt])
 }
 
 model Cliente {
@@ -192,6 +216,11 @@ model Cliente {
   email        String?
   creadoEn     DateTime  @default(now())
   Factura      Factura[]
+
+  @@index([codigo])
+  @@index([nombre])
+  @@index([cuitDni])
+  @@index([creadoEn])
 }
 
 // Modelo para sugerencias de rubros
@@ -202,6 +231,8 @@ model Rubro {
   productos     Producto[] // Relación inversa con Producto
   creadoEn      DateTime   @default(now())
   actualizadoEn DateTime   @updatedAt
+
+  @@index([nombre])
 }
 
 model Proveedor {
@@ -215,6 +246,10 @@ model Proveedor {
   direccion      String?
   creadoEn       DateTime @default(now())
   actualizadoEn  DateTime @updatedAt
+
+  @@index([nombre])
+  @@index([codigo])
+  @@index([cuitDni])
 }
 
 // Modificar el modelo existente de OrdenCompra para convertirlo en Factura
@@ -244,6 +279,13 @@ model Factura {
   @@index([clienteId])
   @@index([vendedorId])
   @@index([facturaAnuladaId])
+  @@index([fecha])
+  @@index([estado])
+  @@index([tipoComprobante])
+  @@index([numero])
+  @@index([clienteId, fecha])
+  @@index([vendedorId, fecha])
+  @@index([estado, fecha])
 }
 
 model DetalleFactura {
@@ -255,6 +297,9 @@ model DetalleFactura {
   subtotal       Float
   factura        Factura  @relation(fields: [facturaId], references: [id])
   producto       Producto @relation(fields: [productoId], references: [id])
+
+  @@index([facturaId])
+  @@index([productoId])
 }
 
 model PagoFactura {
@@ -267,6 +312,10 @@ model PagoFactura {
   observaciones String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  @@index([facturaId])
+  @@index([fecha])
+  @@index([metodoPago])
 }
 
 model PagoVendedor {
@@ -282,6 +331,11 @@ model PagoVendedor {
   anioComision  Int?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  @@index([vendedorId])
+  @@index([fecha])
+  @@index([esComision])
+  @@index([mesComision, anioComision])
 }
 
 model AfipCertificate {
@@ -294,6 +348,10 @@ model AfipCertificate {
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([type])
+  @@index([environment])
+  @@index([isActive])
 }
 
 model EmailPermitido {
@@ -302,4 +360,7 @@ model EmailPermitido {
   activo    Boolean  @default(true)
   creadoPor String
   creadoEn  DateTime @default(now())
+
+  @@index([email])
+  @@index([activo])
 }
